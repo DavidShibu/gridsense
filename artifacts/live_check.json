@@ -1,0 +1,12 @@
+{
+  "accepted_commands": 5,
+  "stored_cycles": 5,
+  "stored_acknowledgements": 5,
+  "history_rows": 1008,
+  "dashboard_http": 200,
+  "selected_model": "traditional_decision_tree",
+  "max_observed_load_kw": 9.5,
+  "mean_response_ms": 48.43411445617676,
+  "p95_response_ms": 73.36711883544922,
+  "mean_inference_ms": 0.5779799772426486
+}

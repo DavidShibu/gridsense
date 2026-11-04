@@ -1,0 +1,1 @@
+{"name":"gridsense-node-red","version":"1.0.0","private":true,"scripts":{"start":"node-red --userDir . --settings settings.js flows.json"},"dependencies":{"@flowfuse/node-red-dashboard":"^1.0.0","node-red":"^4.1.0"},"devDependencies":{"aedes":"^0.51.3","pptxgenjs":"^4.0.1"}}

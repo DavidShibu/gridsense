@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+node-red/node_modules/
+node-red/.config*
+node-red/.sessions.json
+node-red/lib/
+node-red/flows_cred.json
+*.log
+.pids/
+station.db
+station.db-wal
+station.db-shm
+artifacts/*.pkl
+submission/
+
+EXPLAIN.md 
+make_tree_summary.py 
+digest.txt

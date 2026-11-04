@@ -1,0 +1,355 @@
+[
+  {
+    "id": "station",
+    "type": "tab",
+    "label": "GridSense required IoT loop",
+    "disabled": false,
+    "info": "ev/telemetry splits immediately: A live Dashboard; B SQLite commit -> DB-only analytics/evaluation -> decision -> ev/actuator. ev/ack records control performance."
+  },
+  {
+    "id": "broker",
+    "type": "mqtt-broker",
+    "name": "Local Mosquitto",
+    "broker": "127.0.0.1",
+    "port": "1883",
+    "clientid": "gridsense_nodered",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true
+  },
+  {
+    "id": "sensor",
+    "type": "mqtt in",
+    "z": "station",
+    "name": "Station telemetry",
+    "topic": "ev/telemetry",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "live-filter",
+        "request"
+      ]
+    ]
+  },
+  {
+    "id": "request",
+    "type": "function",
+    "z": "station",
+    "name": "Path B: SQLite storage adapter",
+    "func": "msg.headers = {'content-type':'application/json'};\nreturn msg;",
+    "outputs": 1,
+    "x": 400,
+    "y": 100,
+    "wires": [
+      [
+        "analytics"
+      ]
+    ]
+  },
+  {
+    "id": "analytics",
+    "type": "http request",
+    "z": "station",
+    "name": "Commit telemetry/history to SQLite",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://127.0.0.1:8765/store",
+    "persist": false,
+    "senderr": false,
+    "x": 700,
+    "y": 100,
+    "wires": [
+      [
+        "stored"
+      ]
+    ]
+  },
+  {
+    "id": "route",
+    "type": "function",
+    "z": "station",
+    "name": "Validate service response",
+    "func": "if(msg.statusCode !== 200 || !msg.payload.decision) {node.error('Decision failed',msg);return null;} return [msg,msg];",
+    "outputs": 2,
+    "x": 980,
+    "y": 100,
+    "wires": [
+      [
+        "dashboard"
+      ],
+      [
+        "command"
+      ]
+    ]
+  },
+  {
+    "id": "command",
+    "type": "function",
+    "z": "station",
+    "name": "Publish whole-station decision",
+    "func": "msg.payload = JSON.stringify(msg.payload.decision); return msg;",
+    "outputs": 1,
+    "x": 990,
+    "y": 220,
+    "wires": [
+      [
+        "actuator"
+      ]
+    ]
+  },
+  {
+    "id": "actuator",
+    "type": "mqtt out",
+    "z": "station",
+    "name": "Actuator command",
+    "topic": "ev/actuator",
+    "qos": "1",
+    "retain": "false",
+    "broker": "broker",
+    "x": 1260,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "ack",
+    "type": "mqtt in",
+    "z": "station",
+    "name": "Actuator acknowledgement",
+    "topic": "ev/ack",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker",
+    "x": 180,
+    "y": 320,
+    "wires": [
+      [
+        "debug",
+        "ack-store"
+      ]
+    ]
+  },
+  {
+    "id": "errors",
+    "type": "catch",
+    "z": "station",
+    "name": "Flow errors",
+    "scope": null,
+    "uncaught": false,
+    "x": 170,
+    "y": 400,
+    "wires": [
+      [
+        "debug"
+      ]
+    ]
+  },
+  {
+    "id": "debug",
+    "type": "debug",
+    "z": "station",
+    "name": "Acknowledgements / errors",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 510,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "dashboard",
+    "type": "ui-template",
+    "z": "station",
+    "group": "group",
+    "page": "",
+    "ui": "",
+    "name": "ML comparison and closed-loop metrics",
+    "order": 2,
+    "width": "12",
+    "height": "0",
+    "head": "",
+    "format": "<template><div v-if=\"msg?.payload?.decision\" style=\"padding:16px\">\n<h2>ML, computational and closed-loop evaluation</h2>\n<p>Selected: {{msg.payload.decision.model}} \u00b7 Next-hour demand: {{msg.payload.decision.forecast_next_hour_kwh.toFixed(2)}} kWh</p>\n<p>Prediction latency this cycle: {{msg.payload.decision.inference_ms.toFixed(3)}} ms</p>\n<p>Classification = hourly energy \u226530 kWh; regression predicts kWh.</p>\n<div style=\"overflow-x:auto\"><table style=\"width:100%;text-align:left\"><thead><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>RMSE</th><th>MAE</th><th>R\u00b2</th><th>Train s</th><th>p95 ms</th><th>Memory bytes*</th><th>Size bytes</th></tr></thead>\n<tbody><tr v-for=\"(m,name) in msg.payload.decision.performance.models\" :key=\"name\"><td>{{name}}</td><td>{{m.test.accuracy.toFixed(3)}}</td><td>{{m.test.precision.toFixed(3)}}</td><td>{{m.test.recall.toFixed(3)}}</td><td>{{m.test.f1.toFixed(3)}}</td><td>{{m.test.rmse_kwh.toFixed(2)}}</td><td>{{m.test.mae_kwh.toFixed(2)}}</td><td>{{m.test.r2.toFixed(3)}}</td><td>{{m.computational.training_seconds.toFixed(2)}}</td><td>{{m.computational.inference_p95_ms.toFixed(3)}}</td><td>{{m.computational.peak_traced_memory_bytes}}</td><td>{{m.computational.model_size_bytes}}</td></tr></tbody></table></div>\n<p>*Peak tracked allocations during training, not total process memory. Metrics are from held-out synthetic days.</p>\n<h3>Control performance (this run)</h3><p v-for=\"(value,key) in msg.payload.closed_loop\" :key=\"key\">{{key}}: {{value === null ? 'Not yet measurable' : value}}</p>\n<h3>Decision</h3><p v-for=\"a in msg.payload.decision.assignments\" :key=\"a.charger_id\">{{a.charger_id}} \u2192 {{a.ev_id}}: {{a.rate_kw}} kW</p>\n<p>Minimum assignment dwell: 6 simulated minutes; rate deadband: 0.25 kW. Safety/completion/departure override.</p>\n<h3>Alerts</h3><p v-for=\"a in msg.payload.decision.alerts\" :key=\"a\">{{a}}</p>\n</div><p v-else>Waiting for stored-data analytics\u2026 Live telemetry above is independent.</p></template>",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1260,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "base",
+    "type": "ui-base",
+    "name": "GridSense",
+    "path": "/dashboard",
+    "appIcon": "",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "showPageTitle": true,
+    "navigationStyle": "default",
+    "titleBarStyle": "default"
+  },
+  {
+    "id": "page",
+    "type": "ui-page",
+    "name": "Station",
+    "ui": "base",
+    "path": "/station",
+    "icon": "electric-car",
+    "layout": "grid",
+    "theme": "theme",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": "0",
+        "cols": "3"
+      },
+      {
+        "name": "Tablet",
+        "px": "576",
+        "cols": "6"
+      },
+      {
+        "name": "Desktop",
+        "px": "1024",
+        "cols": "12"
+      }
+    ],
+    "order": 1,
+    "className": "",
+    "visible": true,
+    "disabled": false
+  },
+  {
+    "id": "group",
+    "type": "ui-group",
+    "name": "Live station and analytics",
+    "page": "page",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": false,
+    "className": "",
+    "visible": true,
+    "disabled": false,
+    "groupType": "default"
+  },
+  {
+    "id": "theme",
+    "type": "ui-theme",
+    "name": "GridSense",
+    "colors": {
+      "surface": "#ffffff",
+      "primary": "#166534",
+      "bgPage": "#f1f5f9",
+      "groupBg": "#ffffff",
+      "groupOutline": "#cbd5e1"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "6px",
+      "widgetGap": "12px"
+    }
+  },
+  {
+    "id": "live-filter",
+    "type": "function",
+    "z": "station",
+    "name": "Path A: live telemetry only",
+    "func": "return msg.payload.kind === 'history' ? null : msg;",
+    "outputs": 1,
+    "x": 390,
+    "y": 40,
+    "wires": [
+      [
+        "live-dashboard"
+      ]
+    ]
+  },
+  {
+    "id": "live-dashboard",
+    "type": "ui-template",
+    "z": "station",
+    "group": "group",
+    "name": "Direct real-time sensor display",
+    "order": 1,
+    "width": "12",
+    "height": "0",
+    "templateScope": "local",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "x": 690,
+    "y": 40,
+    "wires": [
+      []
+    ],
+    "format": "<template><div v-if=\"msg?.payload?.vehicles\" style=\"padding:16px\"><h2>GridSense live sensors \u2014 Path A</h2><p>Sensor timestamp: {{new Date(msg.payload.timestamp*1000).toLocaleTimeString()}} \u00b7 Sequence {{msg.payload.sequence}} \u00b7 Simulated hour {{msg.payload.hour.toFixed(2)}}</p><h3>Load {{msg.payload.load_kw.toFixed(2)}} / {{msg.payload.capacity_kw}} kW</h3><p>Applied command {{msg.payload.applied_sequence}} \u00b7 {{msg.payload.source}}</p><table style=\"width:100%;text-align:left\"><tr><th>EV</th><th>Status</th><th>Charger</th><th>SoC</th><th>Target</th><th>Arrival / deadline</th><th>kW</th><th>Remaining kWh</th></tr><tr v-for=\"e in msg.payload.vehicles\" :key=\"e.id\"><td>{{e.id}}</td><td>{{e.status}}</td><td>{{e.charger || '\u2014'}}</td><td>{{(e.soc*100).toFixed(1)}}%</td><td>{{e.target*100}}%</td><td>{{e.arrival}} / {{e.departure}}</td><td>{{e.power_kw.toFixed(2)}}</td><td>{{e.remaining_kwh.toFixed(2)}}</td></tr></table><p>This panel updates directly from MQTT, even when analytics/storage is unavailable. Check the sensor timestamp for freshness.</p></div><p v-else>Waiting for ev/telemetry\u2026</p></template>"
+  },
+  {
+    "id": "stored",
+    "type": "function",
+    "z": "station",
+    "name": "After commit: pass DB record key only",
+    "func": "if(msg.statusCode !== 200){node.error('SQLite write failed',msg);return null;} if(msg.payload.stored_history_rows !== undefined){node.warn('History committed: '+msg.payload.stored_history_rows);return null;} msg.headers={'content-type':'application/json'};return msg;",
+    "outputs": 1,
+    "x": 980,
+    "y": 130,
+    "wires": [
+      [
+        "db-decision"
+      ]
+    ]
+  },
+  {
+    "id": "db-decision",
+    "type": "http request",
+    "z": "station",
+    "name": "Read SQLite \u2192 ML/evaluation \u2192 decision",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://127.0.0.1:8765/decide",
+    "x": 990,
+    "y": 190,
+    "wires": [
+      [
+        "route"
+      ]
+    ]
+  },
+  {
+    "id": "ack-store",
+    "type": "http request",
+    "z": "station",
+    "name": "Persist actuator timing and switches",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://127.0.0.1:8765/ack",
+    "x": 580,
+    "y": 390,
+    "wires": [
+      []
+    ]
+  }
+]

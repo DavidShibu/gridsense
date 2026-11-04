@@ -1,0 +1,46 @@
+{
+  "scenario": "congested original requests",
+  "definition": "Same six-EV scenario and initial state for each model; 185 steps; timing excludes MQTT/Node-RED. Full network timing is in live_check.json.",
+  "results": {
+    "constant_baseline": {
+      "deadline_success_fraction": 0.6666666666666666,
+      "energy_fulfillment_fraction": 0.6553191489361703,
+      "unmet_energy_kwh": 24.299999999999915,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 10,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 0.01874486664058389
+    },
+    "traditional_decision_tree": {
+      "deadline_success_fraction": 0.6666666666666666,
+      "energy_fulfillment_fraction": 0.6553191489361703,
+      "unmet_energy_kwh": 24.299999999999915,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 10,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 0.45746270114102877
+    },
+    "ensemble_random_forest": {
+      "deadline_success_fraction": 0.6666666666666666,
+      "energy_fulfillment_fraction": 0.6553191489361703,
+      "unmet_energy_kwh": 24.299999999999915,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 10,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 4.685606486856233
+    },
+    "deep_ann": {
+      "deadline_success_fraction": 0.6666666666666666,
+      "energy_fulfillment_fraction": 0.6553191489361703,
+      "unmet_energy_kwh": 24.299999999999915,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 10,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 0.42041837728607495
+    }
+  }
+}

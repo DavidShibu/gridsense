@@ -1,0 +1,46 @@
+{
+  "scenario": "feasible low-energy requests",
+  "definition": "Same six-EV scenario and initial state for each model; 185 steps; timing excludes MQTT/Node-RED. Full network timing is in live_check.json.",
+  "results": {
+    "constant_baseline": {
+      "deadline_success_fraction": 1.0,
+      "energy_fulfillment_fraction": 1.0,
+      "unmet_energy_kwh": 0.0,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 9,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 0.010788647734836952
+    },
+    "traditional_decision_tree": {
+      "deadline_success_fraction": 1.0,
+      "energy_fulfillment_fraction": 1.0,
+      "unmet_energy_kwh": 0.0,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 9,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 0.11280918890308286
+    },
+    "ensemble_random_forest": {
+      "deadline_success_fraction": 1.0,
+      "energy_fulfillment_fraction": 1.0,
+      "unmet_energy_kwh": 0.0,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 9,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 4.7350448619171575
+    },
+    "deep_ann": {
+      "deadline_success_fraction": 1.0,
+      "energy_fulfillment_fraction": 1.0,
+      "unmet_energy_kwh": 0.0,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 9,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 0.40208973003098286
+    }
+  }
+}

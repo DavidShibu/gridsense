@@ -1,0 +1,3637 @@
+{
+  "scenario": "Identical 4 kWh urgent and 12 kWh flexible requests, 16:00\u201324:00",
+  "reference": "Unmanaged removes the site limit for a counterfactual demand trace; same EVs, sockets, taper and deadlines.",
+  "billing": "EV energy only; fixed base load excluded from all three policies.",
+  "results": {
+    "unmanaged": {
+      "charging_cost_inr": 192.0,
+      "delivered_kwh": 16.0,
+      "peak_grid_kw": 15.0,
+      "unmet_kwh": 0.0,
+      "deadlines_met": true,
+      "fallback_cycles": 0,
+      "samples": [
+        {
+          "hour": 16.0,
+          "grid_kw": 15.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.033333333333335,
+          "grid_kw": 15.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.066666666666666,
+          "grid_kw": 14.999999999999996,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.1,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.133333333333333,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.166666666666668,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.2,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.233333333333334,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.266666666666666,
+          "grid_kw": 14.999999999999991,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.3,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.333333333333332,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.366666666666667,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.4,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.433333333333334,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.466666666666665,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.5,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.533333333333335,
+          "grid_kw": 15.000000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.566666666666666,
+          "grid_kw": 8.999999999999519,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.6,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.633333333333333,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.666666666666668,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.7,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.733333333333334,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.766666666666666,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.8,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.833333333333332,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.866666666666667,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.9,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.933333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.966666666666665,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.0,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.03333333333333,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.066666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.1,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.133333333333333,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.166666666666668,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.2,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.233333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.266666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.3,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.333333333333332,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.366666666666667,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.4,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.433333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.466666666666665,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.5,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.53333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.566666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.6,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.633333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.666666666666668,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.7,
+          "grid_kw": 3.999999999998604,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.966666666666665,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 22.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        }
+      ]
+    },
+    "edf": {
+      "charging_cost_inr": 192.0,
+      "delivered_kwh": 16.0,
+      "peak_grid_kw": 9.5,
+      "unmet_kwh": 0.0,
+      "deadlines_met": true,
+      "fallback_cycles": 0,
+      "samples": [
+        {
+          "hour": 16.0,
+          "grid_kw": 9.5,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.033333333333335,
+          "grid_kw": 9.5,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.066666666666666,
+          "grid_kw": 9.5,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.1,
+          "grid_kw": 9.5,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.133333333333333,
+          "grid_kw": 9.500000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.166666666666668,
+          "grid_kw": 9.500000000000004,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.2,
+          "grid_kw": 9.499999999999996,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.233333333333334,
+          "grid_kw": 9.50000000000001,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.266666666666666,
+          "grid_kw": 9.499999999999984,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.3,
+          "grid_kw": 9.50000000000001,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.333333333333332,
+          "grid_kw": 9.499999999999996,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.366666666666667,
+          "grid_kw": 9.50000000000001,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.4,
+          "grid_kw": 9.499999999999996,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.433333333333334,
+          "grid_kw": 9.50000000000001,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.466666666666665,
+          "grid_kw": 9.50000000000001,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.5,
+          "grid_kw": 9.499999999999996,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.533333333333335,
+          "grid_kw": 9.499999999999996,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.566666666666666,
+          "grid_kw": 3.499999999999565,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.6,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.633333333333333,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.666666666666668,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.7,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.733333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.766666666666666,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.8,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.833333333333332,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.866666666666667,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.9,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.933333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.966666666666665,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.0,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.03333333333333,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.066666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.1,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.133333333333333,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.166666666666668,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.2,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.233333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.266666666666666,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.3,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.333333333333332,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.366666666666667,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.4,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.433333333333334,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.466666666666665,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.5,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.53333333333333,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.566666666666666,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.6,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.633333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.666666666666668,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.7,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.733333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.766666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.8,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.833333333333332,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.866666666666667,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.9,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.933333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.966666666666665,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.0,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.03333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.066666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.1,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.133333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.166666666666668,
+          "grid_kw": 4.999999999999293,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 22.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        }
+      ]
+    },
+    "tou": {
+      "charging_cost_inr": 84.0,
+      "delivered_kwh": 16.0,
+      "peak_grid_kw": 8.0,
+      "unmet_kwh": 0.0,
+      "deadlines_met": true,
+      "fallback_cycles": 0,
+      "samples": [
+        {
+          "hour": 16.0,
+          "grid_kw": 8.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.033333333333335,
+          "grid_kw": 8.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.066666666666666,
+          "grid_kw": 7.999999999999998,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.1,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.133333333333333,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.166666666666668,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.2,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.233333333333334,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.266666666666666,
+          "grid_kw": 7.999999999999996,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.3,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.333333333333332,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.366666666666667,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.4,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.433333333333334,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.466666666666665,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.5,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.533333333333335,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.566666666666666,
+          "grid_kw": 1.999989999999955,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 16.966666666666665,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.466666666666665,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 17.966666666666665,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 18.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 19.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 20.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.0,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.03333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.066666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.1,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.133333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.166666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.2,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.233333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.266666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.3,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.333333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.366666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.4,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.433333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.46666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.5,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.53333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.566666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.6,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.633333333333333,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.666666666666668,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.733333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 21.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 12.0
+        },
+        {
+          "hour": 22.0,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.03333333333333,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.066666666666666,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.1,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.133333333333333,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.166666666666668,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.2,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.233333333333334,
+          "grid_kw": 8.000000000000002,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.266666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.3,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.333333333333332,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.366666666666667,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.4,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.433333333333334,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.46666666666667,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.5,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.53333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.566666666666666,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.6,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.633333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.666666666666668,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.7,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.733333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.766666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.8,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.833333333333332,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.866666666666667,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.9,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.933333333333334,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 22.96666666666667,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.0,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.03333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.066666666666666,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.1,
+          "grid_kw": 8.000000000000028,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.133333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.166666666666668,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.2,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.233333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.266666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.3,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.333333333333332,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.366666666666667,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.4,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.433333333333334,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.46666666666667,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.5,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.53333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.566666666666666,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.6,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.633333333333333,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.666666666666668,
+          "grid_kw": 7.999999999999975,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.7,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.733333333333334,
+          "grid_kw": 3.999999999998604,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.766666666666666,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.8,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.833333333333332,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.866666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.9,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.933333333333334,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        },
+        {
+          "hour": 23.96666666666667,
+          "grid_kw": 1.0,
+          "price_per_kwh": 3.0
+        }
+      ]
+    }
+  }
+}
