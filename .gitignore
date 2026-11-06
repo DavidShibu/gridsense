@@ -24,3 +24,5 @@ node-red/flows.public-check*.json
 .pids/
 artifacts/*.pkl
 submission/
+
+.demo-python311/

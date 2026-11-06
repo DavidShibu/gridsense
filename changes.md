@@ -1,5 +1,15 @@
 # GridSense change log
 
+## Demo-only submission archive
+
+- Rebuilt GridSense_Team3.zip from a strict runtime allowlist: 22 files, including the current sender/ layout.
+- Added setup_demo.ps1, start_demo.ps1 and a concise demo README inside the ZIP.
+- Included the self-contained model bundle with dashboard metrics; omitted standalone training/evaluation artifacts.
+- Excluded tests, reports, slides, developer tools, logs, caches, databases and backups.
+- Removed development-only npm dependencies from the packaged manifest and regenerated its lock offline.
+- Checked runtime imports, bundled model loading, fresh-database decisions, flow generation and PowerShell syntax from an extracted copy.
+- Dependency installation on the receiving laptop remains a first-time setup step.
+
 ## Public EMQX broker deployment
 
 - Added shared `mqtt-public.json` with broker.emqx.io:8883 and a unique project topic prefix.
