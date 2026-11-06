@@ -8,19 +8,23 @@ import time
 
 
 class Actuator:
-    def __init__(self, station, run_id, lock):
+    def __init__(self, station, run_id, lock, topic_prefix='ev'):
         self.station, self.run_id, self.lock = station, run_id, lock
+        self.command_topic = topic_prefix + '/actuator'
+        self.ack_topic = topic_prefix + '/ack'
         self.switch_count = 0
         self.rapid_switch_count = 0
         self.last_switch = {}
 
     def on_connect(self, client, userdata, flags, reason_code, properties):
         if reason_code == 0:
-            client.subscribe('ev/actuator', qos=1)
+            client.subscribe(self.command_topic, qos=1)
 
     def on_message(self, client, userdata, msg):
         try:
             command = json.loads(msg.payload)
+            if not isinstance(command, dict) or command.get('run_id') != self.run_id:
+                return
             with self.lock:
                 before = {e.charger:e.id for e in self.station.vehicles if e.charger and e.power_kw > 0}
                 accepted = command.get('run_id') == self.run_id and self.station.accept(command)
@@ -33,7 +37,7 @@ class Actuator:
                                 self.rapid_switch_count += 1
                             self.last_switch[charger] = now
                             self.switch_count += 1
-            client.publish('ev/ack',json.dumps({'run_id':self.run_id,'sequence':command.get('sequence'),
+            client.publish(self.ack_topic,json.dumps({'run_id':self.run_id,'sequence':command.get('sequence'),
                 'accepted':accepted, 'received_at':time.time(),
                 'response_ms':max(0,(time.time()-command['sensor_timestamp'])*1000),
                 'inference_ms':command.get('inference_ms'),

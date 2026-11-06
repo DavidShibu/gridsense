@@ -1,5 +1,27 @@
 # GridSense change log
 
+## Public EMQX broker deployment
+
+- Added shared `mqtt-public.json` with broker.emqx.io:8883 and a unique project topic prefix.
+- Added `--public-broker` sensor mode and matching actuator command/acknowledgement topics.
+- Added `-PublicBroker` Windows startup and an automatically generated Node-RED TLS flow.
+- Kept the original local/private flow for existing tests and offline demonstrations.
+- Public mode drops private credentials; unrelated run commands are ignored.
+- Verified the real public broker loop: five accepted commands, stored cycles and acknowledgements, and a trained-model decision. The test used local clients through the internet broker, not two physical laptops.
+- All 35 unit tests and Node-RED flow/dashboard validation passed.
+- Updated the cloud setup guide and submission package.
+
+## Cloud MQTT preparation
+
+- Added verified TLS, optional provider CA certificates and MQTT username/password login to the sensor simulator.
+- Passwords are prompted without echo or read from an environment variable; they are not command-line arguments.
+- Added connection acknowledgement checks so authentication rejection is reported before publishing readings.
+- Added `-CloudBroker` to Windows launchers; this runs the project without starting a local broker or sensor.
+- Enabled Node-RED's default credential encryption instead of plaintext credential storage.
+- Added `CLOUD_MQTT.md` with cloud account setup, shared broker configuration and both-laptop verification steps.
+- Added tests for TLS certificate verification, rejection of plaintext credentials and local-demo compatibility.
+- At that stage, cloud configuration was pending. The public-broker deployment above subsequently verified the internet MQTT loop without requiring an account.
+
 ## Two-laptop MQTT deployment
 
 - Added `--broker-host` and `--broker-port` to `simulator.py` so the sensor laptop can connect to the project laptop.

@@ -1,0 +1,14 @@
+{
+  "broker": "broker.emqx.io",
+  "port": 8883,
+  "tls_verified": true,
+  "test_scope": "Local clients using the real internet broker; not two physical laptops",
+  "topic_prefix": "gridsense/team3/b7749f4efd894610/check-bc2c0e241622",
+  "accepted_commands": 5,
+  "stored_cycles": 6,
+  "stored_acknowledgements": 6,
+  "selected_model": "traditional_decision_tree",
+  "dashboard_http": 200,
+  "max_observed_load_kw": 9.5,
+  "mean_response_ms": 700.1426696777344
+}

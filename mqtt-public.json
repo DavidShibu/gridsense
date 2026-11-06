@@ -1,0 +1,5 @@
+{
+  "host": "broker.emqx.io",
+  "port": 8883,
+  "topic_prefix": "gridsense/team3/b7749f4efd894610"
+}

@@ -42,3 +42,16 @@ assert.equal(nodes.ack.topic,'ev/ack');
 const ids=new Set(flows.map(n=>n.id));
 for(const node of flows) for(const output of node.wires||[]) for(const id of output) assert.ok(ids.has(id),id);
 console.log('Dashboard templates compile; SoC, chart mapping, deduplication, bounded history and wiring pass.');
+const {buildPublicFlow} = require('./build-public-flow.cjs');
+const profile = JSON.parse(fs.readFileSync(__dirname + '/../mqtt-public.json', 'utf8'));
+const publicNodes = Object.fromEntries(buildPublicFlow(profile, flows).map(n => [n.id, n]));
+assert.equal(publicNodes['public-broker'].usetls, true);
+assert.equal(publicNodes['public-tls'].verifyservercert, true);
+assert.equal(publicNodes['public-tls'].servername, profile.host);
+for (const [id, suffix] of [['sensor','telemetry'], ['actuator','actuator'], ['ack','ack']]) {
+  assert.equal(publicNodes[id].topic, `${profile.topic_prefix}/${suffix}`);
+  assert.equal(publicNodes[id].broker, 'public-broker');
+}
+assert.equal(nodes.sensor.topic, 'ev/telemetry'); // Base flow remains unchanged.
+assert.notEqual(buildPublicFlow(profile, flows).find(n=>n.id==='public-broker').clientid, publicNodes['public-broker'].clientid);
+console.log('Public profile: matching topics, verified TLS, unique client IDs and local-flow isolation pass.');

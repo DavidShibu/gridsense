@@ -5,9 +5,13 @@ Node-RED persists them. This script never writes training data directly to DB.
 """
 import argparse
 import json
+import os
+import ssl
+import getpass
 import threading
 import time
 import uuid
+from pathlib import Path
 import paho.mqtt.client as mqtt
 from station_core import Station, historical_sessions, tou_demo_station
 from actuator import Actuator
@@ -23,26 +27,85 @@ def history_payload():
                        for d, row in enumerate(bins) for h,value in enumerate(row)]}
 
 
+def configure_connection(client, args):
+    if args.ca_cert and not args.tls:
+        raise ValueError('--ca-cert requires --tls')
+    if args.username and not args.tls:
+        raise ValueError('Use --tls when sending MQTT login credentials')
+    if args.tls:
+        client.tls_set_context(ssl.create_default_context(cafile=args.ca_cert))
+    if args.username:
+        password = os.environ.get('MQTT_PASSWORD')
+        if password is None:
+            password = getpass.getpass('MQTT password: ')
+        client.username_pw_set(args.username, password)
+
+
+def apply_public_profile(args):
+    profile = json.loads(Path(__file__).with_name('mqtt-public.json').read_text(encoding='utf-8'))
+    args.broker_host = profile['host']
+    args.broker_port = profile['port']
+    args.topic_prefix = profile['topic_prefix']
+    args.tls = True
+    # Public mode must never forward credentials intended for a private broker.
+    args.username = None
+
+
+def validate_topic_prefix(prefix):
+    if not prefix or prefix.startswith('/') or prefix.endswith('/') or any(c in prefix for c in ('+', '#', '\x00')):
+        raise ValueError('Topic prefix must be nonempty, without wildcards or leading/trailing slash')
+    return prefix
+
+
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--public-broker', action='store_true', help='Use the shared mqtt-public.json profile with verified TLS and no credentials')
+    parser.add_argument('--topic-prefix', default='ev', help='Shared MQTT topic prefix (default: ev for local/private mode)')
     parser.add_argument('--broker-host', default='127.0.0.1', help='MQTT broker address (project laptop LAN IP for two-laptop mode)')
-    parser.add_argument('--broker-port', type=int, default=1883, help='MQTT broker TCP port')
+    parser.add_argument('--broker-port', type=int, help='MQTT TCP port (default: 8883 with TLS, otherwise 1883)')
+    parser.add_argument('--tls', action='store_true', help='Verify the cloud broker certificate and encrypt MQTT traffic')
+    parser.add_argument('--ca-cert', help='Optional broker CA certificate PEM file')
+    parser.add_argument('--username', default=os.environ.get('MQTT_USERNAME'), help='MQTT username; password is prompted or read from MQTT_PASSWORD')
     parser.add_argument('--history',action='store_true',help='Replay 42 historical days via MQTT for database training')
     parser.add_argument('--tou-demo', action='store_true', help='Feasible 16:00–24:00 tariff-shifting demo')
     args = parser.parse_args()
+    try:
+        if args.public_broker:
+            apply_public_profile(args)
+        validate_topic_prefix(args.topic_prefix)
+    except (ValueError, OSError, KeyError) as exc:
+        parser.error(str(exc))
+    telemetry_topic = args.topic_prefix + '/telemetry'
     station, lock = (tou_demo_station() if args.tou_demo else Station()), threading.Lock()
     # The hardware rating remains 10 kW; Station enforces a 9.5 kW operating
     # ceiling including base load, independently of received command limits.
     run_id = str(uuid.uuid4())
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id='gridsense_sensor_'+run_id[:8])
-    actuator = Actuator(station,run_id,lock)
-    client.on_connect = actuator.on_connect
+    try:
+        configure_connection(client, args)
+    except ValueError as exc:
+        parser.error(str(exc))
+    actuator = Actuator(station,run_id,lock,topic_prefix=args.topic_prefix)
+    connected = threading.Event()
+    connection_errors = []
+    def on_connect(client, userdata, flags, reason_code, properties):
+        if reason_code != 0:
+            connection_errors.append(str(reason_code))
+        else:
+            actuator.on_connect(client, userdata, flags, reason_code, properties)
+        connected.set()
+    client.on_connect = on_connect
     client.on_message = actuator.on_message
-    client.connect(args.broker_host,args.broker_port,60)
+    client.connect(args.broker_host,args.broker_port or (8883 if args.tls else 1883),60)
     client.loop_start()
     try:
+        if not connected.wait(15):
+            raise RuntimeError('MQTT connection acknowledgement timed out; check the broker address, TLS and network')
+        if connection_errors:
+            raise RuntimeError('MQTT connection rejected: ' + connection_errors[0])
+        print(f'Connected to {args.broker_host}; publishing {telemetry_topic} and listening on {args.topic_prefix}/actuator.', flush=True)
         if args.history:
-            receipt = client.publish('ev/telemetry',json.dumps(history_payload()),qos=1)
+            receipt = client.publish(telemetry_topic,json.dumps(history_payload()),qos=1)
             receipt.wait_for_publish(timeout=10)
             if not receipt.is_published():
                 raise RuntimeError('Broker did not acknowledge history publish')
@@ -53,7 +116,7 @@ def main():
                 state = station.snapshot()
                 state.update(telemetry_fields(state))
                 state.update(kind='telemetry',run_id=run_id,timestamp=time.time())
-            client.publish('ev/telemetry',json.dumps(state),qos=1)
+            client.publish(telemetry_topic,json.dumps(state),qos=1)
             time.sleep(2)
             with lock:
                 station.step(1/30)

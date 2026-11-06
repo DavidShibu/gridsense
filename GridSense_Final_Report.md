@@ -12,7 +12,10 @@ evaluated machine learning, control decisions and actuator acknowledgements.
 
 The supplied architecture image is `refererncesss.png`. One laptop runs the Python
 sensor/plant simulator and attached actuator; the second runs Aedes on TCP 1883,
-Node-RED, SQLite, the analytics/decision service and the dashboard.
+Node-RED, SQLite, the analytics/decision service and the dashboard. This describes
+the retained local/LAN mode. The current public-broker mode instead connects both
+laptops to `broker.emqx.io:8883` over verified TLS, using the shared prefix in
+`mqtt-public.json`. No local MQTT broker is started in public mode.
 
 1. `simulator.py` publishes JSON observations on `ev/telemetry` every two seconds.
 2. Node-RED receives observations through MQTT with QoS 1.
@@ -102,6 +105,19 @@ and meets all deadlines. Deadline-only charging costs INR 192; tariff-aware char
 costs INR 84 (56.25% lower). Peak site demand is 9.5 kW and 8 kW respectively. This
 result is specific to the synthetic scenario and illustrative prices. The unmanaged
 counterfactual reaches 15 kW and intentionally has no site cap.
+
+## Public-broker verification
+
+A separate real-internet test is recorded in `artifacts/public_mqtt_check.json`.
+It verified TLS, five accepted commands, six stored cycles and six stored
+acknowledgements through `broker.emqx.io:8883`, with the trained decision-tree
+model, dashboard HTTP 200 and a 9.5 kW observed peak. Mean observed response was
+approximately 700 ms. Both test clients ran locally while using the real internet
+broker; connectivity between the user's two physical laptops remains to be tested.
+
+Public topics are not access-controlled. The unique namespace reduces collisions
+but does not prevent others reading data or injecting messages. TLS protects the
+connection, not topic privacy. Only synthetic demonstration data is used.
 
 ## Reproduction and limitations
 

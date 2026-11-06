@@ -3,6 +3,13 @@
 EV charging and load-management demonstration using simulated sensors, MQTT,
 Node-RED, SQLite, five ML models and actuator feedback.
 
+For the configured **public internet MQTT broker**, follow [CLOUD_MQTT.md](CLOUD_MQTT.md).
+On the project laptop run `./start.ps1 -PublicBroker`; on the sensor laptop run
+`python simulator.py --public-broker`. Copy the four sensor Python files **plus
+`mqtt-public.json`** to the sensor laptop. This uses `broker.emqx.io:8883` with
+verified TLS and project-specific topics. No account or password is required.
+The LAN setup below remains available as an alternative.
+
 ## Architecture
 
 The implementation follows the branching diagram in `refererncesss.png`:

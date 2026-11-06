@@ -1,4 +1,4 @@
-param([switch]$TouDemo, [switch]$RemoteSensor)
+param([switch]$TouDemo, [switch]$RemoteSensor, [switch]$CloudBroker, [switch]$PublicBroker)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 if (-not (Test-Path "node-red/node_modules/node-red/red.js")) {
@@ -9,7 +9,16 @@ if (-not (Test-Path -LiteralPath $pythonPath)) { $pythonPath = (Get-Command pyth
 $simulatorArgs = if ($TouDemo) { "simulator.py --tou-demo" } else { "simulator.py" }
 $nodePath = (Get-Command node).Source
 $workers = @()
+$flowName = 'flows.json'
+if ($PublicBroker) {
+    & $nodePath 'node-red/build-public-flow.cjs'
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to generate public MQTT flow.' }
+    $flowName = 'flows.public.json'
+    $CloudBroker = $true
+}
+if ($CloudBroker) { $RemoteSensor = $true }
 try {
+    if (-not $CloudBroker) {
     $probe = [System.Net.Sockets.TcpClient]::new()
     try { $probe.Connect('127.0.0.1', 1883); $brokerReady = $true }
     catch { $brokerReady = $false }
@@ -20,11 +29,16 @@ try {
     } elseif ($RemoteSensor) {
         Write-Warning "An existing broker is using port 1883. Ensure it accepts LAN connections; this launcher cannot change its listener."
     }
+    }
     $workers += Start-Process $pythonPath -ArgumentList "station_service.py" -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput "service.log" -RedirectStandardError "service.err.log"
-    $workers += Start-Process $nodePath -ArgumentList "node_modules/node-red/red.js --userDir . --settings settings.js flows.json" -WorkingDirectory "$PSScriptRoot/node-red" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$PSScriptRoot/nodered.log" -RedirectStandardError "$PSScriptRoot/nodered.err.log"
+    $workers += Start-Process $nodePath -ArgumentList "node_modules/node-red/red.js --userDir . --settings settings.js $flowName" -WorkingDirectory "$PSScriptRoot/node-red" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$PSScriptRoot/nodered.log" -RedirectStandardError "$PSScriptRoot/nodered.err.log"
     Start-Sleep -Seconds 3
     if (-not $RemoteSensor) {
         $workers += Start-Process $pythonPath -ArgumentList $simulatorArgs -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput "station.log" -RedirectStandardError "station.err.log"
+    } elseif ($PublicBroker) {
+        Write-Host "On the sensor laptop: python simulator.py --public-broker (copy mqtt-public.json with the sensor files)."
+    } elseif ($CloudBroker) {
+        Write-Host "Cloud MQTT mode: configure the broker address, TLS and credentials in Node-RED. No local broker or sensor is started."
     } else {
         Write-Host "Waiting for the remote sensor. On the sensor laptop: python simulator.py --broker-host <this-laptop-LAN-IP>"
     }

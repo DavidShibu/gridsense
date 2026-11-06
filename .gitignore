@@ -12,6 +12,9 @@ node-red/.config*
 node-red/.sessions.json
 node-red/lib/
 node-red/flows_cred.json
+node-red/flows.public.json
+node-red/flows.public_cred.json
+node-red/flows.public-check*.json
 
 # Local runtime data, training binaries and submission output
 *.log

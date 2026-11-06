@@ -6,9 +6,10 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parent
 FILES = [
-    'README.md', 'changes.md', 'GridSense_Final_Report.md', 'GridSense_Presentation.pptx',
+    'README.md', 'changes.md', 'CLOUD_MQTT.md', 'GridSense_Final_Report.md', 'GridSense_Presentation.pptx',
     'refererncesss.png', 'pyproject.toml', 'requirements-station.txt',
     'requirements-tested.txt', 'package_submission.py',
+    'mqtt-public.json', 'node-red/build-public-flow.cjs',
     'simulator.py', 'actuator.py', 'station_core.py', 'station_simulator.py',
     'station_store.py', 'station_service.py', 'decision_engine.py',
     'ml_train.py', 'tariff.py', 'tou_scheduler.py',
