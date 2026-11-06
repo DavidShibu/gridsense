@@ -10,7 +10,7 @@
       "capacity_violation_samples": 0,
       "socket_switches": 10,
       "rapid_switches": 0,
-      "mean_local_decision_ms": 0.01874486664058389
+      "mean_local_decision_ms": 0.019155679320966876
     },
     "traditional_decision_tree": {
       "deadline_success_fraction": 0.6666666666666666,
@@ -20,7 +20,7 @@
       "capacity_violation_samples": 0,
       "socket_switches": 10,
       "rapid_switches": 0,
-      "mean_local_decision_ms": 0.45746270114102877
+      "mean_local_decision_ms": 0.19491891867506342
     },
     "ensemble_random_forest": {
       "deadline_success_fraction": 0.6666666666666666,
@@ -30,7 +30,7 @@
       "capacity_violation_samples": 0,
       "socket_switches": 10,
       "rapid_switches": 0,
-      "mean_local_decision_ms": 4.685606486856233
+      "mean_local_decision_ms": 4.830366486331096
     },
     "deep_ann": {
       "deadline_success_fraction": 0.6666666666666666,
@@ -40,7 +40,27 @@
       "capacity_violation_samples": 0,
       "socket_switches": 10,
       "rapid_switches": 0,
-      "mean_local_decision_ms": 0.42041837728607495
+      "mean_local_decision_ms": 0.4600940574262593
+    },
+    "traditional_svr": {
+      "deadline_success_fraction": 0.6666666666666666,
+      "energy_fulfillment_fraction": 0.6553191489361703,
+      "unmet_energy_kwh": 24.299999999999915,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 10,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 0.490115672299588
+    },
+    "ensemble_xgboost": {
+      "deadline_success_fraction": 0.6666666666666666,
+      "energy_fulfillment_fraction": 0.6553191489361703,
+      "unmet_energy_kwh": 24.299999999999915,
+      "peak_site_kw": 9.5,
+      "capacity_violation_samples": 0,
+      "socket_switches": 10,
+      "rapid_switches": 0,
+      "mean_local_decision_ms": 0.4411562188603991
     }
   }
 }

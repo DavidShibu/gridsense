@@ -25,6 +25,8 @@ def history_payload():
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--broker-host', default='127.0.0.1', help='MQTT broker address (project laptop LAN IP for two-laptop mode)')
+    parser.add_argument('--broker-port', type=int, default=1883, help='MQTT broker TCP port')
     parser.add_argument('--history',action='store_true',help='Replay 42 historical days via MQTT for database training')
     parser.add_argument('--tou-demo', action='store_true', help='Feasible 16:00–24:00 tariff-shifting demo')
     args = parser.parse_args()
@@ -36,7 +38,7 @@ def main():
     actuator = Actuator(station,run_id,lock)
     client.on_connect = actuator.on_connect
     client.on_message = actuator.on_message
-    client.connect('127.0.0.1',1883,60)
+    client.connect(args.broker_host,args.broker_port,60)
     client.loop_start()
     try:
         if args.history:

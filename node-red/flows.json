@@ -9,7 +9,7 @@
   {
     "id": "broker",
     "type": "mqtt-broker",
-    "name": "Local Mosquitto",
+    "name": "Project laptop MQTT broker (Aedes)",
     "broker": "127.0.0.1",
     "port": "1883",
     "clientid": "gridsense_nodered",

@@ -25,6 +25,24 @@ class RubricTests(unittest.TestCase):
             with database(db) as conn:
                 self.assertEqual(conn.execute('SELECT count(*) FROM demand_samples').fetchone()[0],1008)
 
+    def test_complete_reference_architecture_wiring(self):
+        nodes = {n['id']: n for n in json.loads(
+            (Path(__file__).parents[1]/'node-red/flows.json').read_text())}
+        # Storage must precede analytics; only the decision path drives MQTT output.
+        for source, target in [('request', 'analytics'), ('analytics', 'stored'),
+                               ('stored', 'db-decision'), ('db-decision', 'route'),
+                               ('command', 'actuator')]:
+            self.assertEqual(nodes[source]['wires'], [[target]])
+        self.assertEqual(nodes['route']['wires'][1], ['command'])
+        self.assertTrue(nodes['analytics']['url'].endswith('/store'))
+        self.assertTrue(nodes['db-decision']['url'].endswith('/decide'))
+        self.assertEqual(nodes['actuator']['type'], 'mqtt out')
+        self.assertEqual(nodes['ack']['topic'], 'ev/ack')
+        self.assertIn('ack-store', nodes['ack']['wires'][0])
+        self.assertTrue(nodes['ack-store']['url'].endswith('/ack'))
+        for name in ('sensor', 'actuator', 'ack'):
+            self.assertEqual(nodes[name]['broker'], 'broker')
+
     def test_unstored_state_cannot_drive_decision(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp)/'test.db'

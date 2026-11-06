@@ -1,5 +1,5 @@
 {
-  "created_at": 1793719582.4636707,
+  "created_at": 1793986934.8064644,
   "dataset": "synthetic-history-v5",
   "source": [
     "seeded_python_sensor_simulator"
@@ -53,22 +53,42 @@
     41
   ],
   "classification_definition": "Actual energy >= 30.0 kWh; independent classifier probability >=0.5. Threshold fixed before test evaluation.",
-  "imbalance_handling": "Balanced tree/forest weights; deterministic ANN training-only oversampling; validation/test unchanged.",
+  "imbalance_handling": "Balanced tree/forest/SVC weights; XGBoost training-only class ratio; ANN training-only oversampling; validation/test unchanged.",
   "test_binary_disagreements": {
     "traditional_decision_tree": {
       "traditional_decision_tree": 0,
       "ensemble_random_forest": 8,
-      "deep_ann": 19
+      "deep_ann": 19,
+      "traditional_svr": 1,
+      "ensemble_xgboost": 0
     },
     "ensemble_random_forest": {
       "traditional_decision_tree": 8,
       "ensemble_random_forest": 0,
-      "deep_ann": 23
+      "deep_ann": 23,
+      "traditional_svr": 9,
+      "ensemble_xgboost": 8
     },
     "deep_ann": {
       "traditional_decision_tree": 19,
       "ensemble_random_forest": 23,
-      "deep_ann": 0
+      "deep_ann": 0,
+      "traditional_svr": 18,
+      "ensemble_xgboost": 19
+    },
+    "traditional_svr": {
+      "traditional_decision_tree": 1,
+      "ensemble_random_forest": 9,
+      "deep_ann": 18,
+      "traditional_svr": 0,
+      "ensemble_xgboost": 1
+    },
+    "ensemble_xgboost": {
+      "traditional_decision_tree": 0,
+      "ensemble_random_forest": 8,
+      "deep_ann": 19,
+      "traditional_svr": 1,
+      "ensemble_xgboost": 0
     }
   },
   "memory_definition": "Peak tracemalloc-tracked allocations during fit, not total process RSS or GPU memory",
@@ -139,10 +159,10 @@
         "samples": 168
       },
       "computational": {
-        "training_seconds": 0.02260909997858107,
-        "inference_mean_ms": 0.08395399898290634,
-        "inference_p95_ms": 0.09525999485049395,
-        "peak_traced_memory_bytes": 228761,
+        "training_seconds": 0.022238200064748526,
+        "inference_mean_ms": 0.08694600081071258,
+        "inference_p95_ms": 0.10020506451837718,
+        "peak_traced_memory_bytes": 230628,
         "model_size_bytes": 10988,
         "regressor_size_bytes": 5806,
         "classifier_size_bytes": 5182,
@@ -215,10 +235,10 @@
         "samples": 168
       },
       "computational": {
-        "training_seconds": 1.0112102999701165,
-        "inference_mean_ms": 4.504513996653259,
-        "inference_p95_ms": 4.978755014599301,
-        "peak_traced_memory_bytes": 205359,
+        "training_seconds": 1.0223853000206873,
+        "inference_mean_ms": 4.709551997948438,
+        "inference_p95_ms": 5.658819933887569,
+        "peak_traced_memory_bytes": 191387,
         "model_size_bytes": 1299974,
         "regressor_size_bytes": 645339,
         "classifier_size_bytes": 654635,
@@ -291,13 +311,167 @@
         "samples": 168
       },
       "computational": {
-        "training_seconds": 1.8555288999923505,
-        "inference_mean_ms": 0.36926399916410446,
-        "inference_p95_ms": 0.4376449971459805,
-        "peak_traced_memory_bytes": 867255,
+        "training_seconds": 1.970917999977246,
+        "inference_mean_ms": 0.3766600042581558,
+        "inference_p95_ms": 0.5248049623332917,
+        "peak_traced_memory_bytes": 866559,
         "model_size_bytes": 211755,
         "regressor_size_bytes": 106183,
         "classifier_size_bytes": 105572,
+        "measurement_scope": "Training/memory/size include regressor + classifier. Control inference measures regressor only."
+      },
+      "warnings": []
+    },
+    "traditional_svr": {
+      "validation": {
+        "accuracy": 0.9107142857142857,
+        "precision": 0.9655172413793104,
+        "recall": 0.6666666666666666,
+        "f1": 0.7887323943661971,
+        "balanced_accuracy": 0.8293650793650793,
+        "confusion_matrix_tn_fp_fn_tp": [
+          125,
+          1,
+          14,
+          28
+        ],
+        "average_precision": 0.7706080499610153,
+        "rmse_kwh": 16.327160586222618,
+        "mae_kwh": 13.150570513551722,
+        "r2": 0.2956684244623734,
+        "positive_samples": 42,
+        "negative_samples": 126,
+        "majority_baseline_accuracy": 0.75,
+        "samples": 168
+      },
+      "test": {
+        "accuracy": 0.9107142857142857,
+        "precision": 0.896551724137931,
+        "recall": 0.6842105263157895,
+        "f1": 0.7761194029850746,
+        "balanced_accuracy": 0.8305668016194332,
+        "confusion_matrix_tn_fp_fn_tp": [
+          127,
+          3,
+          12,
+          26
+        ],
+        "average_precision": 0.7945122993081682,
+        "rmse_kwh": 14.539056207921579,
+        "mae_kwh": 11.413547605217165,
+        "r2": 0.4284679824928347,
+        "positive_samples": 38,
+        "negative_samples": 130,
+        "majority_baseline_accuracy": 0.7738095238095238,
+        "samples": 168
+      },
+      "thresholded_regression_test": {
+        "accuracy": 0.9047619047619048,
+        "precision": 0.84375,
+        "recall": 0.7105263157894737,
+        "f1": 0.7714285714285715,
+        "balanced_accuracy": 0.8360323886639676,
+        "confusion_matrix_tn_fp_fn_tp": [
+          125,
+          5,
+          11,
+          27
+        ],
+        "average_precision": 0.8062181517251039,
+        "rmse_kwh": 14.539056207921579,
+        "mae_kwh": 11.413547605217165,
+        "r2": 0.4284679824928347,
+        "positive_samples": 38,
+        "negative_samples": 130,
+        "majority_baseline_accuracy": 0.7738095238095238,
+        "samples": 168
+      },
+      "computational": {
+        "training_seconds": 0.08356279996223748,
+        "inference_mean_ms": 0.444302000105381,
+        "inference_p95_ms": 0.6096050376072525,
+        "peak_traced_memory_bytes": 107512,
+        "model_size_bytes": 52700,
+        "regressor_size_bytes": 28954,
+        "classifier_size_bytes": 23746,
+        "measurement_scope": "Training/memory/size include regressor + classifier. Control inference measures regressor only."
+      },
+      "warnings": [
+        "The `probability` parameter was deprecated in 1.9 and will be removed in version 1.11. Use `CalibratedClassifierCV(SVC(), ensemble=False)` instead of `SVC(probability=True)`"
+      ]
+    },
+    "ensemble_xgboost": {
+      "validation": {
+        "accuracy": 0.9166666666666666,
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "balanced_accuracy": 0.8333333333333333,
+        "confusion_matrix_tn_fp_fn_tp": [
+          126,
+          0,
+          14,
+          28
+        ],
+        "average_precision": 0.7863592579612981,
+        "rmse_kwh": 13.529082920733828,
+        "mae_kwh": 10.864218112176257,
+        "r2": 0.5163930348986705,
+        "positive_samples": 42,
+        "negative_samples": 126,
+        "majority_baseline_accuracy": 0.75,
+        "samples": 168
+      },
+      "test": {
+        "accuracy": 0.9166666666666666,
+        "precision": 0.9285714285714286,
+        "recall": 0.6842105263157895,
+        "f1": 0.7878787878787878,
+        "balanced_accuracy": 0.834412955465587,
+        "confusion_matrix_tn_fp_fn_tp": [
+          128,
+          2,
+          12,
+          26
+        ],
+        "average_precision": 0.7867018030620024,
+        "rmse_kwh": 12.705816798571343,
+        "mae_kwh": 9.97596716934861,
+        "r2": 0.5635109915416279,
+        "positive_samples": 38,
+        "negative_samples": 130,
+        "majority_baseline_accuracy": 0.7738095238095238,
+        "samples": 168
+      },
+      "thresholded_regression_test": {
+        "accuracy": 0.9166666666666666,
+        "precision": 0.9285714285714286,
+        "recall": 0.6842105263157895,
+        "f1": 0.7878787878787878,
+        "balanced_accuracy": 0.834412955465587,
+        "confusion_matrix_tn_fp_fn_tp": [
+          128,
+          2,
+          12,
+          26
+        ],
+        "average_precision": 0.7563559329540751,
+        "rmse_kwh": 12.705816798571343,
+        "mae_kwh": 9.97596716934861,
+        "r2": 0.5635109915416279,
+        "positive_samples": 38,
+        "negative_samples": 130,
+        "majority_baseline_accuracy": 0.7738095238095238,
+        "samples": 168
+      },
+      "computational": {
+        "training_seconds": 0.07715549995191395,
+        "inference_mean_ms": 0.3042780002579093,
+        "inference_p95_ms": 0.42524501914158447,
+        "peak_traced_memory_bytes": 55330,
+        "model_size_bytes": 286724,
+        "regressor_size_bytes": 148051,
+        "classifier_size_bytes": 138673,
         "measurement_scope": "Training/memory/size include regressor + classifier. Control inference measures regressor only."
       },
       "warnings": []

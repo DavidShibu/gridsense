@@ -1,26 +1,23 @@
-# Python-generated files
+# Generated Python files and local environment
 __pycache__/
-*.py[oc]
+*.py[cod]
+.venv/
 build/
 dist/
-wheels/
-*.egg-info
+*.egg-info/
 
-# Virtual environments
-.venv
+# Installed Node dependencies and local Node-RED state
 node-red/node_modules/
 node-red/.config*
 node-red/.sessions.json
 node-red/lib/
 node-red/flows_cred.json
+
+# Local runtime data, training binaries and submission output
 *.log
+*.db
+*.db-wal
+*.db-shm
 .pids/
-station.db
-station.db-wal
-station.db-shm
 artifacts/*.pkl
 submission/
-
-EXPLAIN.md 
-make_tree_summary.py 
-digest.txt
