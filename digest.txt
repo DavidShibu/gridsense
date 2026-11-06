@@ -1,7 +1,6 @@
 Directory structure:
 └── gridsense3/
     ├── README.md
-    ├── actuator.py
     ├── changes.md
     ├── CLOUD_MQTT.md
     ├── decision_engine.py
@@ -15,15 +14,12 @@ Directory structure:
     ├── pyproject.toml
     ├── requirements-station.txt
     ├── requirements-tested.txt
-    ├── simulator.py
     ├── start.ps1
     ├── start.sh
     ├── start_station.ps1
-    ├── station_core.py
     ├── station_service.py
     ├── station_simulator.py
     ├── station_store.py
-    ├── tariff.py
     ├── tou_scheduler.py
     ├── verify_diagnoses.py
     ├── .python-version
@@ -48,6 +44,12 @@ Directory structure:
     │       ├── ml-comparison.vue
     │       ├── price-load.vue
     │       └── station-overview.vue
+    ├── sender/
+    │   ├── actuator.py
+    │   ├── mqtt-public.json
+    │   ├── simulator.py
+    │   ├── station_core.py
+    │   └── tariff.py
     └── tests/
         ├── live_check.py
         ├── public_mqtt_check.py
@@ -221,63 +223,6 @@ adapter; the demonstration does not establish real-world prediction accuracy.
 
 
 ================================================
-FILE: actuator.py
-================================================
-"""Actuator driver co-located with physical simulator; subscribes to ev/actuator.
-
-It shares the simulated hardware state with simulator.py, so there is only one
-authoritative station. It does not make scheduling decisions.
-"""
-import json
-import time
-
-
-class Actuator:
-    def __init__(self, station, run_id, lock, topic_prefix='ev'):
-        self.station, self.run_id, self.lock = station, run_id, lock
-        self.command_topic = topic_prefix + '/actuator'
-        self.ack_topic = topic_prefix + '/ack'
-        self.switch_count = 0
-        self.rapid_switch_count = 0
-        self.last_switch = {}
-
-    def on_connect(self, client, userdata, flags, reason_code, properties):
-        if reason_code == 0:
-            client.subscribe(self.command_topic, qos=1)
-
-    def on_message(self, client, userdata, msg):
-        try:
-            command = json.loads(msg.payload)
-            if not isinstance(command, dict) or command.get('run_id') != self.run_id:
-                return
-            with self.lock:
-                before = {e.charger:e.id for e in self.station.vehicles if e.charger and e.power_kw > 0}
-                accepted = command.get('run_id') == self.run_id and self.station.accept(command)
-                if accepted:
-                    after = {e.charger:e.id for e in self.station.vehicles if e.charger and e.power_kw > 0}
-                    for charger in self.station.chargers:
-                        if before.get(charger) != after.get(charger):
-                            now = self.station.hour
-                            if charger in self.last_switch and now-self.last_switch[charger] < .1-1e-8:
-                                self.rapid_switch_count += 1
-                            self.last_switch[charger] = now
-                            self.switch_count += 1
-            client.publish(self.ack_topic,json.dumps({'run_id':self.run_id,'sequence':command.get('sequence'),
-                'accepted':accepted, 'received_at':time.time(),
-                'response_ms':max(0,(time.time()-command['sensor_timestamp'])*1000),
-                'inference_ms':command.get('inference_ms'),
-                'decision_ms':command.get('decision_ms'),
-                'switch_count':self.switch_count,'rapid_switch_count':self.rapid_switch_count}),qos=1)
-        except (ValueError, KeyError, TypeError) as exc:
-            print('Rejected actuator message:',exc,flush=True)
-
-
-if __name__ == '__main__':
-    raise SystemExit('Actuator is attached to the sensor/plant process. Run python simulator.py.')
-
-
-
-================================================
 FILE: changes.md
 ================================================
 Error reading file with 'cp1252': 'charmap' codec can't decode byte 0x9d in position 2360: character maps to <undefined>
@@ -413,7 +358,7 @@ import math
 import pickle
 import time
 from pathlib import Path
-from station_core import schedule, site_limit_kw, edf_key
+from sender.station_core import schedule, site_limit_kw, edf_key
 from tou_scheduler import apply_tou
 from station_store import DB, database, read_state
 
@@ -529,7 +474,7 @@ import json
 import pickle
 import time
 from pathlib import Path
-from station_core import Station, schedule
+from sender.station_core import Station, schedule
 from decision_engine import stabilize
 from ml_train import ARTIFACTS, predict
 
@@ -599,9 +544,9 @@ FILE: evaluate_tou.py
 """Paired deterministic tariff demo; no MQTT publications or production DB writes."""
 import json
 from pathlib import Path
-from station_core import schedule, tou_demo_station
+from sender.station_core import schedule, tou_demo_station
 from tou_scheduler import apply_tou, CONTROL_HOURS
-from tariff import price_at
+from sender.tariff import price_at
 
 
 def evaluate():
@@ -1103,143 +1048,6 @@ threadpoolctl==3.7.0
 
 
 ================================================
-FILE: simulator.py
-================================================
-"""Physical sensor layer + simulated plant. Publishes only through MQTT.
-
---history replays synthetic historical sensor observations through ev/telemetry;
-Node-RED persists them. This script never writes training data directly to DB.
-"""
-import argparse
-import json
-import os
-import ssl
-import getpass
-import threading
-import time
-import uuid
-from pathlib import Path
-import paho.mqtt.client as mqtt
-from station_core import Station, historical_sessions, tou_demo_station
-from actuator import Actuator
-from tariff import telemetry_fields
-
-
-def history_payload():
-    bins = [[0.0]*24 for _ in range(42)]
-    for r in historical_sessions(days=42):
-        bins[r['day']][r['hour']] += r['energy_kwh']
-    return {'kind':'history','dataset':'synthetic-history-v5','source':'seeded_python_sensor_simulator',
-            'samples':[{'day':d,'hour':h,'energy_kwh':value}
-                       for d, row in enumerate(bins) for h,value in enumerate(row)]}
-
-
-def configure_connection(client, args):
-    if args.ca_cert and not args.tls:
-        raise ValueError('--ca-cert requires --tls')
-    if args.username and not args.tls:
-        raise ValueError('Use --tls when sending MQTT login credentials')
-    if args.tls:
-        client.tls_set_context(ssl.create_default_context(cafile=args.ca_cert))
-    if args.username:
-        password = os.environ.get('MQTT_PASSWORD')
-        if password is None:
-            password = getpass.getpass('MQTT password: ')
-        client.username_pw_set(args.username, password)
-
-
-def apply_public_profile(args):
-    profile = json.loads(Path(__file__).with_name('mqtt-public.json').read_text(encoding='utf-8'))
-    args.broker_host = profile['host']
-    args.broker_port = profile['port']
-    args.topic_prefix = profile['topic_prefix']
-    args.tls = True
-    # Public mode must never forward credentials intended for a private broker.
-    args.username = None
-
-
-def validate_topic_prefix(prefix):
-    if not prefix or prefix.startswith('/') or prefix.endswith('/') or any(c in prefix for c in ('+', '#', '\x00')):
-        raise ValueError('Topic prefix must be nonempty, without wildcards or leading/trailing slash')
-    return prefix
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--public-broker', action='store_true', help='Use the shared mqtt-public.json profile with verified TLS and no credentials')
-    parser.add_argument('--topic-prefix', default='ev', help='Shared MQTT topic prefix (default: ev for local/private mode)')
-    parser.add_argument('--broker-host', default='127.0.0.1', help='MQTT broker address (project laptop LAN IP for two-laptop mode)')
-    parser.add_argument('--broker-port', type=int, help='MQTT TCP port (default: 8883 with TLS, otherwise 1883)')
-    parser.add_argument('--tls', action='store_true', help='Verify the cloud broker certificate and encrypt MQTT traffic')
-    parser.add_argument('--ca-cert', help='Optional broker CA certificate PEM file')
-    parser.add_argument('--username', default=os.environ.get('MQTT_USERNAME'), help='MQTT username; password is prompted or read from MQTT_PASSWORD')
-    parser.add_argument('--history',action='store_true',help='Replay 42 historical days via MQTT for database training')
-    parser.add_argument('--tou-demo', action='store_true', help='Feasible 16:00â€“24:00 tariff-shifting demo')
-    args = parser.parse_args()
-    try:
-        if args.public_broker:
-            apply_public_profile(args)
-        validate_topic_prefix(args.topic_prefix)
-    except (ValueError, OSError, KeyError) as exc:
-        parser.error(str(exc))
-    telemetry_topic = args.topic_prefix + '/telemetry'
-    station, lock = (tou_demo_station() if args.tou_demo else Station()), threading.Lock()
-    # The hardware rating remains 10 kW; Station enforces a 9.5 kW operating
-    # ceiling including base load, independently of received command limits.
-    run_id = str(uuid.uuid4())
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id='gridsense_sensor_'+run_id[:8])
-    try:
-        configure_connection(client, args)
-    except ValueError as exc:
-        parser.error(str(exc))
-    actuator = Actuator(station,run_id,lock,topic_prefix=args.topic_prefix)
-    connected = threading.Event()
-    connection_errors = []
-    def on_connect(client, userdata, flags, reason_code, properties):
-        if reason_code != 0:
-            connection_errors.append(str(reason_code))
-        else:
-            actuator.on_connect(client, userdata, flags, reason_code, properties)
-        connected.set()
-    client.on_connect = on_connect
-    client.on_message = actuator.on_message
-    client.connect(args.broker_host,args.broker_port or (8883 if args.tls else 1883),60)
-    client.loop_start()
-    try:
-        if not connected.wait(15):
-            raise RuntimeError('MQTT connection acknowledgement timed out; check the broker address, TLS and network')
-        if connection_errors:
-            raise RuntimeError('MQTT connection rejected: ' + connection_errors[0])
-        print(f'Connected to {args.broker_host}; publishing {telemetry_topic} and listening on {args.topic_prefix}/actuator.', flush=True)
-        if args.history:
-            receipt = client.publish(telemetry_topic,json.dumps(history_payload()),qos=1)
-            receipt.wait_for_publish(timeout=10)
-            if not receipt.is_published():
-                raise RuntimeError('Broker did not acknowledge history publish')
-            print('Published 1008 historical hourly observations. Check /health for SQLite row count before training.')
-            return
-        while True:
-            with lock:
-                state = station.snapshot()
-                state.update(telemetry_fields(state))
-                state.update(kind='telemetry',run_id=run_id,timestamp=time.time())
-            client.publish(telemetry_topic,json.dumps(state),qos=1)
-            time.sleep(2)
-            with lock:
-                station.step(1/30)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        client.disconnect()
-        client.loop_stop()
-
-
-if __name__ == '__main__':
-    main()
-
-
-
-================================================
 FILE: start.ps1
 ================================================
 param([switch]$TouDemo, [switch]$RemoteSensor, [switch]$CloudBroker, [switch]$PublicBroker)
@@ -1324,239 +1132,6 @@ try {
         if (-not $worker.HasExited) { Stop-Process -Id $worker.Id -ErrorAction SilentlyContinue }
     }
 }
-
-
-
-================================================
-FILE: station_core.py
-================================================
-"""Deterministic EV station, deadline scheduler and demand analytics (no I/O)."""
-import math
-import random
-from dataclasses import dataclass, asdict
-
-SAFETY_FACTOR = 0.95
-
-
-def site_limit_kw(state):
-    """Rated site capacity remains visible; 5% is reserved from all EV plans."""
-    return max(0.0, state['capacity_kw'] * SAFETY_FACTOR)
-
-
-def edf_key(ev, now):
-    # Do not let an already impossible request starve a still-feasible deadline.
-    impossible = ev['remaining_kwh'] > max(0, ev['departure']-now)*ev['max_kw'] + 1e-6
-    return (impossible, ev['departure'], ev['arrival'], ev['id'])
-
-
-@dataclass
-class Vehicle:
-    id: str
-    arrival: float
-    departure: float
-    capacity: float
-    soc: float
-    target: float
-    max_kw: float = 7.0
-    charger: str | None = None
-    status: str = "scheduled"
-    power_kw: float = 0.0
-    delivered_kwh: float = 0.0
-
-    @property
-    def remaining(self):
-        return max(0.0, (self.target - self.soc) * self.capacity)
-
-
-def demo_vehicles():
-    # Explicitly synthetic; more vehicles than sockets demonstrates queuing.
-    return [Vehicle("EV1", 0, 3, 40, .40, .70),
-            Vehicle("EV2", 0, 2, 40, .50, .90),
-            Vehicle("EV3", .25, 4, 50, .40, .65),
-            Vehicle("EV4", .5, 2.5, 30, .60, .80),
-            Vehicle("EV5", 1, 5, 60, .50, .70),
-            Vehicle("EV6", 2, 6, 40, .30, .60)]
-
-
-class Station:
-    def __init__(self, vehicles=None, chargers=2, capacity_kw=10.0):
-        self.vehicles = demo_vehicles() if vehicles is None else vehicles
-        self.chargers = [f"C{i+1}" for i in range(chargers)]
-        self.capacity_kw = capacity_kw
-        self.base_kw = 1.0
-        self.hour = 0.0
-        self.sequence = 0
-        self.command_sequence = -1
-        self.command = {}
-        self.command_until = -1.0
-        self.last_applied_sequence = -1
-        self.refresh()
-
-    def refresh(self):
-        for ev in self.vehicles:
-            if self.hour >= ev.departure:
-                ev.status = "departed"
-                ev.charger = None
-                ev.power_kw = 0
-            elif ev.remaining < 1e-8:
-                ev.status = "complete"
-                ev.charger = None
-                ev.power_kw = 0
-            elif self.hour >= ev.arrival and ev.charger is None:
-                ev.status = "queued"
-
-    def snapshot(self):
-        self.refresh()
-        rows = []
-        for ev in self.vehicles:
-            row = asdict(ev)
-            row["remaining_kwh"] = round(ev.remaining, 6)
-            rows.append(row)
-        return {"sequence": self.sequence, "hour": self.hour,
-                "capacity_kw": self.capacity_kw, "base_kw": self.base_kw,
-                "operating_limit_kw": self.capacity_kw * SAFETY_FACTOR,
-                "chargers": self.chargers, "vehicles": rows,
-                "load_kw": self.base_kw + sum(e.power_kw for e in self.vehicles),
-                "applied_sequence": self.last_applied_sequence,
-                "source": "synthetic_python_simulator"}
-
-    def accept(self, command):
-        # A whole-station plan is validated before any actuator state changes.
-        seq = command["sequence"]
-        if not isinstance(seq, int) or seq <= self.command_sequence or seq != self.sequence:
-            return False
-        assignments = command["assignments"]
-        seen_ev, seen_charger = set(), set()
-        total = 0.0
-        by_id = {e.id: e for e in self.vehicles}
-        for a in assignments:
-            ev = by_id.get(a["ev_id"])
-            rate = float(a["rate_kw"])
-            if (ev is None or a["charger_id"] not in self.chargers
-                    or ev.id in seen_ev or a["charger_id"] in seen_charger
-                    or not math.isfinite(rate) or rate < 0 or rate > ev.max_kw
-                    or not ev.arrival <= self.hour < ev.departure or ev.remaining <= 0):
-                return False
-            seen_ev.add(ev.id)
-            seen_charger.add(a["charger_id"])
-            total += rate
-        if total > max(0, self.capacity_kw * SAFETY_FACTOR - self.base_kw) + 1e-9:
-            return False
-        self.command = {a["ev_id"]: dict(a) for a in assignments}
-        self.command_sequence = seq
-        self.last_applied_sequence = seq
-        self.command_until = self.hour + 0.1
-        for ev in self.vehicles:
-            a = self.command.get(ev.id)
-            ev.charger = a["charger_id"] if a else None
-            ev.power_kw = a["rate_kw"] if a else 0.0
-            if a:
-                ev.status = "charging" if ev.power_kw > 0 else "connected"
-        self.refresh()
-        return True
-
-    def step(self, hours):
-        if not math.isfinite(hours) or hours <= 0:
-            raise ValueError("hours must be positive and finite")
-        # Clamp locally even if supply changes after a command was accepted.
-        total = sum(a["rate_kw"] for a in self.command.values())
-        scale = min(1, max(0, self.capacity_kw*SAFETY_FACTOR-self.base_kw) / total) if total else 0
-        for ev in self.vehicles:
-            a = self.command.get(ev.id)
-            duration = max(0, min(hours, ev.departure-self.hour,
-                                  self.command_until-self.hour))
-            if a and duration > 0 and ev.arrival <= self.hour and ev.remaining > 0:
-                taper = min(1, max(0, (1-ev.soc)/.2))
-                power = min(ev.max_kw, a["rate_kw"]) * scale * taper
-                energy = min(ev.remaining, power * duration)
-                ev.soc += energy / ev.capacity
-                ev.delivered_kwh += energy
-                ev.power_kw = energy / hours
-            else:
-                ev.power_kw = 0
-            if ev.charger is not None:
-                ev.status = "charging" if ev.power_kw > 0 else "connected"
-        self.hour += hours
-        self.sequence += 1
-        self.refresh()
-
-
-def tou_demo_station(unmanaged=False):
-    """Feasible peak-to-off-peak scenario; separate from the overloaded original demo."""
-    station = Station([
-        Vehicle('EV1', 16, 18, 40, .3, .4),
-        Vehicle('EV2', 16, 24, 40, .3, .6),
-    ], capacity_kw=100 if unmanaged else 10)
-    station.hour = 16.
-    return station
-
-
-def historical_sessions(days=28, seed=42):
-    """Independent synthetic training days with morning/evening arrival peaks."""
-    rng = random.Random(seed)
-    rows = []
-    for day in range(days):
-        for hour in range(24):
-            count = max(0, round((4 if hour in (8, 9, 17, 18) else 1) + rng.gauss(0, 1)))
-            for _ in range(count):
-                rows.append({"day": day, "hour": hour,
-                             "energy_kwh": rng.uniform(5, 20)})
-    return rows
-
-
-def demand_model():
-    """Hourly seasonal-mean regression, evaluated on held-out whole days."""
-    rows = historical_sessions()
-    bins = [[0.0]*24 for _ in range(28)]
-    counts = [0]*24
-    for r in rows:
-        bins[r["day"]][r["hour"]] += r["energy_kwh"]
-        counts[r["hour"]] += 1
-    profile = [sum(d[h] for d in bins[:21])/21 for h in range(24)]
-    baseline = sum(profile)/24
-    errors = [abs(day[h]-profile[h]) for day in bins[21:] for h in range(24)]
-    naive = [abs(day[h]-baseline) for day in bins[21:] for h in range(24)]
-    return {"profile_kwh": profile, "arrivals_per_hour": [n/28 for n in counts],
-            "mae_kwh": sum(errors)/len(errors), "baseline_mae_kwh": sum(naive)/len(naive),
-            "training_days": 21, "test_days": 7,
-            "source": "seeded synthetic history; not a real-world accuracy claim"}
-
-
-def schedule(state, model=None):
-    model = demand_model() if model is None else model
-    now = state["hour"]
-    active = [e for e in state["vehicles"]
-              if e["arrival"] <= now < e["departure"] and e["remaining_kwh"] > 1e-8]
-    active.sort(key=lambda e: edf_key(e, now))
-    available = max(0.0, site_limit_kw(state)-state["base_kw"])
-    forecast = model["profile_kwh"][int(now+1) % 24]
-    typical = sum(model["profile_kwh"])/24
-    # Forecasted busy periods cause feasible sessions to charge earlier.
-    reserve_factor = 1.25 if forecast > typical else 1.0
-    assignments, alerts = [], []
-    for e in active:
-        if e["remaining_kwh"] > (e["departure"]-now)*e["max_kw"] + 1e-6:
-            alerts.append(f'{e["id"]}: cannot meet target before departure at maximum rate')
-    for deadline in sorted({e["departure"] for e in active}):
-        needed = sum(e["remaining_kwh"] for e in active if e["departure"] <= deadline)
-        if needed > available*(deadline-now) + 1e-6:
-            alerts.append("Shared supply cannot meet all current deadlines")
-            break
-    for charger, e in zip(state["chargers"], active):
-        # Work-conserving EDF: finish the first feasible deadline before
-        # spreading scarce power across later requests.
-        rate = min(e["max_kw"], available)
-        rate = math.floor(max(0, rate)*100)/100
-        available -= rate
-        assignments.append({"charger_id": charger, "ev_id": e["id"], "rate_kw": rate})
-    for e in state["vehicles"]:
-        if e["status"] == "departed" and e["remaining_kwh"] > .01:
-            alerts.append(f'{e["id"]}: departed with {e["remaining_kwh"]:.2f} kWh unmet')
-    return {"sequence": state["sequence"], "assignments": assignments,
-            "alerts": alerts, "forecast_next_hour_kwh": forecast,
-            "forecast_factor": reserve_factor, "analytics": model,
-            "operating_limit_kw": site_limit_kw(state),
-            "reason": "Feasibility-aware EDF; impossible requests get best effort; 5% site reserve"}
 
 
 
@@ -1662,7 +1237,7 @@ if __name__ == '__main__':
 FILE: station_simulator.py
 ================================================
 """Compatibility entry point for the rubric-compliant sensor simulator."""
-from simulator import main
+from sender.simulator import main
 
 if __name__ == '__main__':
     main()
@@ -1729,32 +1304,6 @@ def read_state(key, path=DB):
 
 
 ================================================
-FILE: tariff.py
-================================================
-"""Illustrative tariff in INR/kWh; hours are absolute SIMULATION hours."""
-import math
-
-HOURLY_PRICES = (3.,) * 6 + (6.,) * 10 + (12.,) * 6 + (3.,) * 2
-
-
-def price_at(hour):
-    if not math.isfinite(hour):
-        raise ValueError('Simulation hour must be finite')
-    return HOURLY_PRICES[math.floor(hour) % 24]
-
-
-def telemetry_fields(state):
-    active = [e for e in state['vehicles'] if e['arrival'] <= state['hour'] < e['departure']
-              and e['remaining_kwh'] > 1e-8]
-    # Demand envelope only: not a separate counterfactual simulation.
-    demand = sum(sorted((e['max_kw'] for e in active), reverse=True)[:len(state['chargers'])])
-    return {'price_per_kwh': price_at(state['hour']), 'price_currency': 'INR',
-            'charging_load_kw': max(0., state['load_kw'] - state['base_kw']),
-            'unmanaged_demand_estimate_kw': state['base_kw'] + demand}
-
-
-
-================================================
 FILE: tou_scheduler.py
 ================================================
 """Receding-horizon cost minimization with hard energy/deadline/socket constraints.
@@ -1766,8 +1315,8 @@ import math
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, milp
 from scipy.sparse import lil_matrix
-from station_core import site_limit_kw
-from tariff import price_at
+from sender.station_core import site_limit_kw
+from sender.tariff import price_at
 
 CONTROL_HOURS = 1 / 30  # Must match simulator.py's two simulated minutes.
 
@@ -7781,6 +7330,470 @@ export default {
 
 
 ================================================
+FILE: sender/actuator.py
+================================================
+"""Actuator driver co-located with physical simulator; subscribes to ev/actuator.
+
+It shares the simulated hardware state with simulator.py, so there is only one
+authoritative station. It does not make scheduling decisions.
+"""
+import json
+import time
+
+
+class Actuator:
+    def __init__(self, station, run_id, lock, topic_prefix='ev'):
+        self.station, self.run_id, self.lock = station, run_id, lock
+        self.command_topic = topic_prefix + '/actuator'
+        self.ack_topic = topic_prefix + '/ack'
+        self.switch_count = 0
+        self.rapid_switch_count = 0
+        self.last_switch = {}
+
+    def on_connect(self, client, userdata, flags, reason_code, properties):
+        if reason_code == 0:
+            client.subscribe(self.command_topic, qos=1)
+
+    def on_message(self, client, userdata, msg):
+        try:
+            command = json.loads(msg.payload)
+            if not isinstance(command, dict) or command.get('run_id') != self.run_id:
+                return
+            with self.lock:
+                before = {e.charger:e.id for e in self.station.vehicles if e.charger and e.power_kw > 0}
+                accepted = command.get('run_id') == self.run_id and self.station.accept(command)
+                if accepted:
+                    after = {e.charger:e.id for e in self.station.vehicles if e.charger and e.power_kw > 0}
+                    for charger in self.station.chargers:
+                        if before.get(charger) != after.get(charger):
+                            now = self.station.hour
+                            if charger in self.last_switch and now-self.last_switch[charger] < .1-1e-8:
+                                self.rapid_switch_count += 1
+                            self.last_switch[charger] = now
+                            self.switch_count += 1
+            client.publish(self.ack_topic,json.dumps({'run_id':self.run_id,'sequence':command.get('sequence'),
+                'accepted':accepted, 'received_at':time.time(),
+                'response_ms':max(0,(time.time()-command['sensor_timestamp'])*1000),
+                'inference_ms':command.get('inference_ms'),
+                'decision_ms':command.get('decision_ms'),
+                'switch_count':self.switch_count,'rapid_switch_count':self.rapid_switch_count}),qos=1)
+        except (ValueError, KeyError, TypeError) as exc:
+            print('Rejected actuator message:',exc,flush=True)
+
+
+if __name__ == '__main__':
+    raise SystemExit('Actuator is attached to the sensor/plant process. Run python simulator.py.')
+
+
+
+================================================
+FILE: sender/mqtt-public.json
+================================================
+{
+  "host": "broker.emqx.io",
+  "port": 8883,
+  "topic_prefix": "gridsense/team3/b7749f4efd894610"
+}
+
+
+
+================================================
+FILE: sender/simulator.py
+================================================
+"""Physical sensor layer + simulated plant. Publishes only through MQTT.
+
+--history replays synthetic historical sensor observations through ev/telemetry;
+Node-RED persists them. This script never writes training data directly to DB.
+"""
+import argparse
+import json
+import os
+import ssl
+import getpass
+import threading
+import time
+import uuid
+from pathlib import Path
+import paho.mqtt.client as mqtt
+from station_core import Station, historical_sessions, tou_demo_station
+from actuator import Actuator
+from tariff import telemetry_fields
+
+
+def history_payload():
+    bins = [[0.0]*24 for _ in range(42)]
+    for r in historical_sessions(days=42):
+        bins[r['day']][r['hour']] += r['energy_kwh']
+    return {'kind':'history','dataset':'synthetic-history-v5','source':'seeded_python_sensor_simulator',
+            'samples':[{'day':d,'hour':h,'energy_kwh':value}
+                       for d, row in enumerate(bins) for h,value in enumerate(row)]}
+
+
+def configure_connection(client, args):
+    if args.ca_cert and not args.tls:
+        raise ValueError('--ca-cert requires --tls')
+    if args.username and not args.tls:
+        raise ValueError('Use --tls when sending MQTT login credentials')
+    if args.tls:
+        client.tls_set_context(ssl.create_default_context(cafile=args.ca_cert))
+    if args.username:
+        password = os.environ.get('MQTT_PASSWORD')
+        if password is None:
+            password = getpass.getpass('MQTT password: ')
+        client.username_pw_set(args.username, password)
+
+
+def apply_public_profile(args):
+    profile = json.loads(Path(__file__).with_name('mqtt-public.json').read_text(encoding='utf-8'))
+    args.broker_host = profile['host']
+    args.broker_port = profile['port']
+    args.topic_prefix = profile['topic_prefix']
+    args.tls = True
+    # Public mode must never forward credentials intended for a private broker.
+    args.username = None
+
+
+def validate_topic_prefix(prefix):
+    if not prefix or prefix.startswith('/') or prefix.endswith('/') or any(c in prefix for c in ('+', '#', '\x00')):
+        raise ValueError('Topic prefix must be nonempty, without wildcards or leading/trailing slash')
+    return prefix
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--public-broker', action='store_true', help='Use the shared mqtt-public.json profile with verified TLS and no credentials')
+    parser.add_argument('--topic-prefix', default='ev', help='Shared MQTT topic prefix (default: ev for local/private mode)')
+    parser.add_argument('--broker-host', default='127.0.0.1', help='MQTT broker address (project laptop LAN IP for two-laptop mode)')
+    parser.add_argument('--broker-port', type=int, help='MQTT TCP port (default: 8883 with TLS, otherwise 1883)')
+    parser.add_argument('--tls', action='store_true', help='Verify the cloud broker certificate and encrypt MQTT traffic')
+    parser.add_argument('--ca-cert', help='Optional broker CA certificate PEM file')
+    parser.add_argument('--username', default=os.environ.get('MQTT_USERNAME'), help='MQTT username; password is prompted or read from MQTT_PASSWORD')
+    parser.add_argument('--history',action='store_true',help='Replay 42 historical days via MQTT for database training')
+    parser.add_argument('--tou-demo', action='store_true', help='Feasible 16:00â€“24:00 tariff-shifting demo')
+    args = parser.parse_args()
+    try:
+        if args.public_broker:
+            apply_public_profile(args)
+        validate_topic_prefix(args.topic_prefix)
+    except (ValueError, OSError, KeyError) as exc:
+        parser.error(str(exc))
+    telemetry_topic = args.topic_prefix + '/telemetry'
+    station, lock = (tou_demo_station() if args.tou_demo else Station()), threading.Lock()
+    # The hardware rating remains 10 kW; Station enforces a 9.5 kW operating
+    # ceiling including base load, independently of received command limits.
+    run_id = str(uuid.uuid4())
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id='gridsense_sensor_'+run_id[:8])
+    try:
+        configure_connection(client, args)
+    except ValueError as exc:
+        parser.error(str(exc))
+    actuator = Actuator(station,run_id,lock,topic_prefix=args.topic_prefix)
+    connected = threading.Event()
+    connection_errors = []
+    def on_connect(client, userdata, flags, reason_code, properties):
+        if reason_code != 0:
+            connection_errors.append(str(reason_code))
+        else:
+            actuator.on_connect(client, userdata, flags, reason_code, properties)
+        connected.set()
+    client.on_connect = on_connect
+    client.on_message = actuator.on_message
+    client.connect(args.broker_host,args.broker_port or (8883 if args.tls else 1883),60)
+    client.loop_start()
+    try:
+        if not connected.wait(15):
+            raise RuntimeError('MQTT connection acknowledgement timed out; check the broker address, TLS and network')
+        if connection_errors:
+            raise RuntimeError('MQTT connection rejected: ' + connection_errors[0])
+        print(f'Connected to {args.broker_host}; publishing {telemetry_topic} and listening on {args.topic_prefix}/actuator.', flush=True)
+        if args.history:
+            receipt = client.publish(telemetry_topic,json.dumps(history_payload()),qos=1)
+            receipt.wait_for_publish(timeout=10)
+            if not receipt.is_published():
+                raise RuntimeError('Broker did not acknowledge history publish')
+            print('Published 1008 historical hourly observations. Check /health for SQLite row count before training.')
+            return
+        while True:
+            with lock:
+                state = station.snapshot()
+                state.update(telemetry_fields(state))
+                state.update(kind='telemetry',run_id=run_id,timestamp=time.time())
+            client.publish(telemetry_topic,json.dumps(state),qos=1)
+            time.sleep(2)
+            with lock:
+                station.step(1/30)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        client.disconnect()
+        client.loop_stop()
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+================================================
+FILE: sender/station_core.py
+================================================
+"""Deterministic EV station, deadline scheduler and demand analytics (no I/O)."""
+import math
+import random
+from dataclasses import dataclass, asdict
+
+SAFETY_FACTOR = 0.95
+
+
+def site_limit_kw(state):
+    """Rated site capacity remains visible; 5% is reserved from all EV plans."""
+    return max(0.0, state['capacity_kw'] * SAFETY_FACTOR)
+
+
+def edf_key(ev, now):
+    # Do not let an already impossible request starve a still-feasible deadline.
+    impossible = ev['remaining_kwh'] > max(0, ev['departure']-now)*ev['max_kw'] + 1e-6
+    return (impossible, ev['departure'], ev['arrival'], ev['id'])
+
+
+@dataclass
+class Vehicle:
+    id: str
+    arrival: float
+    departure: float
+    capacity: float
+    soc: float
+    target: float
+    max_kw: float = 7.0
+    charger: str | None = None
+    status: str = "scheduled"
+    power_kw: float = 0.0
+    delivered_kwh: float = 0.0
+
+    @property
+    def remaining(self):
+        return max(0.0, (self.target - self.soc) * self.capacity)
+
+
+def demo_vehicles():
+    # Explicitly synthetic; more vehicles than sockets demonstrates queuing.
+    return [Vehicle("EV1", 0, 3, 40, .40, .70),
+            Vehicle("EV2", 0, 2, 40, .50, .90),
+            Vehicle("EV3", .25, 4, 50, .40, .65),
+            Vehicle("EV4", .5, 2.5, 30, .60, .80),
+            Vehicle("EV5", 1, 5, 60, .50, .70),
+            Vehicle("EV6", 2, 6, 40, .30, .60)]
+
+
+class Station:
+    def __init__(self, vehicles=None, chargers=2, capacity_kw=10.0):
+        self.vehicles = demo_vehicles() if vehicles is None else vehicles
+        self.chargers = [f"C{i+1}" for i in range(chargers)]
+        self.capacity_kw = capacity_kw
+        self.base_kw = 1.0
+        self.hour = 0.0
+        self.sequence = 0
+        self.command_sequence = -1
+        self.command = {}
+        self.command_until = -1.0
+        self.last_applied_sequence = -1
+        self.refresh()
+
+    def refresh(self):
+        for ev in self.vehicles:
+            if self.hour >= ev.departure:
+                ev.status = "departed"
+                ev.charger = None
+                ev.power_kw = 0
+            elif ev.remaining < 1e-8:
+                ev.status = "complete"
+                ev.charger = None
+                ev.power_kw = 0
+            elif self.hour >= ev.arrival and ev.charger is None:
+                ev.status = "queued"
+
+    def snapshot(self):
+        self.refresh()
+        rows = []
+        for ev in self.vehicles:
+            row = asdict(ev)
+            row["remaining_kwh"] = round(ev.remaining, 6)
+            rows.append(row)
+        return {"sequence": self.sequence, "hour": self.hour,
+                "capacity_kw": self.capacity_kw, "base_kw": self.base_kw,
+                "operating_limit_kw": self.capacity_kw * SAFETY_FACTOR,
+                "chargers": self.chargers, "vehicles": rows,
+                "load_kw": self.base_kw + sum(e.power_kw for e in self.vehicles),
+                "applied_sequence": self.last_applied_sequence,
+                "source": "synthetic_python_simulator"}
+
+    def accept(self, command):
+        # A whole-station plan is validated before any actuator state changes.
+        seq = command["sequence"]
+        if not isinstance(seq, int) or seq <= self.command_sequence or seq != self.sequence:
+            return False
+        assignments = command["assignments"]
+        seen_ev, seen_charger = set(), set()
+        total = 0.0
+        by_id = {e.id: e for e in self.vehicles}
+        for a in assignments:
+            ev = by_id.get(a["ev_id"])
+            rate = float(a["rate_kw"])
+            if (ev is None or a["charger_id"] not in self.chargers
+                    or ev.id in seen_ev or a["charger_id"] in seen_charger
+                    or not math.isfinite(rate) or rate < 0 or rate > ev.max_kw
+                    or not ev.arrival <= self.hour < ev.departure or ev.remaining <= 0):
+                return False
+            seen_ev.add(ev.id)
+            seen_charger.add(a["charger_id"])
+            total += rate
+        if total > max(0, self.capacity_kw * SAFETY_FACTOR - self.base_kw) + 1e-9:
+            return False
+        self.command = {a["ev_id"]: dict(a) for a in assignments}
+        self.command_sequence = seq
+        self.last_applied_sequence = seq
+        self.command_until = self.hour + 0.1
+        for ev in self.vehicles:
+            a = self.command.get(ev.id)
+            ev.charger = a["charger_id"] if a else None
+            ev.power_kw = a["rate_kw"] if a else 0.0
+            if a:
+                ev.status = "charging" if ev.power_kw > 0 else "connected"
+        self.refresh()
+        return True
+
+    def step(self, hours):
+        if not math.isfinite(hours) or hours <= 0:
+            raise ValueError("hours must be positive and finite")
+        # Clamp locally even if supply changes after a command was accepted.
+        total = sum(a["rate_kw"] for a in self.command.values())
+        scale = min(1, max(0, self.capacity_kw*SAFETY_FACTOR-self.base_kw) / total) if total else 0
+        for ev in self.vehicles:
+            a = self.command.get(ev.id)
+            duration = max(0, min(hours, ev.departure-self.hour,
+                                  self.command_until-self.hour))
+            if a and duration > 0 and ev.arrival <= self.hour and ev.remaining > 0:
+                taper = min(1, max(0, (1-ev.soc)/.2))
+                power = min(ev.max_kw, a["rate_kw"]) * scale * taper
+                energy = min(ev.remaining, power * duration)
+                ev.soc += energy / ev.capacity
+                ev.delivered_kwh += energy
+                ev.power_kw = energy / hours
+            else:
+                ev.power_kw = 0
+            if ev.charger is not None:
+                ev.status = "charging" if ev.power_kw > 0 else "connected"
+        self.hour += hours
+        self.sequence += 1
+        self.refresh()
+
+
+def tou_demo_station(unmanaged=False):
+    """Feasible peak-to-off-peak scenario; separate from the overloaded original demo."""
+    station = Station([
+        Vehicle('EV1', 16, 18, 40, .3, .4),
+        Vehicle('EV2', 16, 24, 40, .3, .6),
+    ], capacity_kw=100 if unmanaged else 10)
+    station.hour = 16.
+    return station
+
+
+def historical_sessions(days=28, seed=42):
+    """Independent synthetic training days with morning/evening arrival peaks."""
+    rng = random.Random(seed)
+    rows = []
+    for day in range(days):
+        for hour in range(24):
+            count = max(0, round((4 if hour in (8, 9, 17, 18) else 1) + rng.gauss(0, 1)))
+            for _ in range(count):
+                rows.append({"day": day, "hour": hour,
+                             "energy_kwh": rng.uniform(5, 20)})
+    return rows
+
+
+def demand_model():
+    """Hourly seasonal-mean regression, evaluated on held-out whole days."""
+    rows = historical_sessions()
+    bins = [[0.0]*24 for _ in range(28)]
+    counts = [0]*24
+    for r in rows:
+        bins[r["day"]][r["hour"]] += r["energy_kwh"]
+        counts[r["hour"]] += 1
+    profile = [sum(d[h] for d in bins[:21])/21 for h in range(24)]
+    baseline = sum(profile)/24
+    errors = [abs(day[h]-profile[h]) for day in bins[21:] for h in range(24)]
+    naive = [abs(day[h]-baseline) for day in bins[21:] for h in range(24)]
+    return {"profile_kwh": profile, "arrivals_per_hour": [n/28 for n in counts],
+            "mae_kwh": sum(errors)/len(errors), "baseline_mae_kwh": sum(naive)/len(naive),
+            "training_days": 21, "test_days": 7,
+            "source": "seeded synthetic history; not a real-world accuracy claim"}
+
+
+def schedule(state, model=None):
+    model = demand_model() if model is None else model
+    now = state["hour"]
+    active = [e for e in state["vehicles"]
+              if e["arrival"] <= now < e["departure"] and e["remaining_kwh"] > 1e-8]
+    active.sort(key=lambda e: edf_key(e, now))
+    available = max(0.0, site_limit_kw(state)-state["base_kw"])
+    forecast = model["profile_kwh"][int(now+1) % 24]
+    typical = sum(model["profile_kwh"])/24
+    # Forecasted busy periods cause feasible sessions to charge earlier.
+    reserve_factor = 1.25 if forecast > typical else 1.0
+    assignments, alerts = [], []
+    for e in active:
+        if e["remaining_kwh"] > (e["departure"]-now)*e["max_kw"] + 1e-6:
+            alerts.append(f'{e["id"]}: cannot meet target before departure at maximum rate')
+    for deadline in sorted({e["departure"] for e in active}):
+        needed = sum(e["remaining_kwh"] for e in active if e["departure"] <= deadline)
+        if needed > available*(deadline-now) + 1e-6:
+            alerts.append("Shared supply cannot meet all current deadlines")
+            break
+    for charger, e in zip(state["chargers"], active):
+        # Work-conserving EDF: finish the first feasible deadline before
+        # spreading scarce power across later requests.
+        rate = min(e["max_kw"], available)
+        rate = math.floor(max(0, rate)*100)/100
+        available -= rate
+        assignments.append({"charger_id": charger, "ev_id": e["id"], "rate_kw": rate})
+    for e in state["vehicles"]:
+        if e["status"] == "departed" and e["remaining_kwh"] > .01:
+            alerts.append(f'{e["id"]}: departed with {e["remaining_kwh"]:.2f} kWh unmet')
+    return {"sequence": state["sequence"], "assignments": assignments,
+            "alerts": alerts, "forecast_next_hour_kwh": forecast,
+            "forecast_factor": reserve_factor, "analytics": model,
+            "operating_limit_kw": site_limit_kw(state),
+            "reason": "Feasibility-aware EDF; impossible requests get best effort; 5% site reserve"}
+
+
+
+================================================
+FILE: sender/tariff.py
+================================================
+"""Illustrative tariff in INR/kWh; hours are absolute SIMULATION hours."""
+import math
+
+HOURLY_PRICES = (3.,) * 6 + (6.,) * 10 + (12.,) * 6 + (3.,) * 2
+
+
+def price_at(hour):
+    if not math.isfinite(hour):
+        raise ValueError('Simulation hour must be finite')
+    return HOURLY_PRICES[math.floor(hour) % 24]
+
+
+def telemetry_fields(state):
+    active = [e for e in state['vehicles'] if e['arrival'] <= state['hour'] < e['departure']
+              and e['remaining_kwh'] > 1e-8]
+    # Demand envelope only: not a separate counterfactual simulation.
+    demand = sum(sorted((e['max_kw'] for e in active), reverse=True)[:len(state['chargers'])])
+    return {'price_per_kwh': price_at(state['hour']), 'price_currency': 'INR',
+            'charging_load_kw': max(0., state['load_kw'] - state['base_kw']),
+            'unmanaged_demand_estimate_kw': state['base_kw'] + demand}
+
+
+
+================================================
 FILE: tests/live_check.py
 ================================================
 """Owns a complete local test stack; ports 1880/1883/8765 must be free."""
@@ -8040,7 +8053,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 import numpy as np
-from station_core import Station, schedule
+from sender.station_core import Station, schedule
 from decision_engine import stabilize, load_bundle, _cache
 from ml_train import scores
 
@@ -8117,8 +8130,8 @@ import time
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from simulator import configure_connection, apply_public_profile, validate_topic_prefix
-from actuator import Actuator
+from sender.simulator import configure_connection, apply_public_profile, validate_topic_prefix
+from sender.actuator import Actuator
 
 
 class MqttConfigurationTests(unittest.TestCase):
@@ -8183,10 +8196,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from station_core import Station
+from sender.station_core import Station
 from station_store import ingest, database, read_state
 from decision_engine import stabilize, decide
-from simulator import history_payload
+from sender.simulator import history_payload
 
 
 class RubricTests(unittest.TestCase):
@@ -8295,7 +8308,7 @@ import tempfile
 import unittest
 from contextlib import closing
 from pathlib import Path
-from station_core import Station, Vehicle, schedule, demand_model
+from sender.station_core import Station, Vehicle, schedule, demand_model
 from station_service import process
 
 
@@ -8374,9 +8387,9 @@ FILE: tests/test_upgrades.py
 ================================================
 import unittest
 from unittest.mock import patch
-from station_core import Station, Vehicle, schedule
+from sender.station_core import Station, Vehicle, schedule
 from tou_scheduler import apply_tou
-from tariff import price_at, telemetry_fields
+from sender.tariff import price_at, telemetry_fields
 
 
 def plan_for(station):
