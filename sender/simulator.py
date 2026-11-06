@@ -13,9 +13,9 @@ import time
 import uuid
 from pathlib import Path
 import paho.mqtt.client as mqtt
-from sender.station_core import Station, historical_sessions, tou_demo_station
-from sender.actuator import Actuator
-from sender.tariff import telemetry_fields
+from station_core import Station, historical_sessions, tou_demo_station
+from actuator import Actuator
+from tariff import telemetry_fields
 
 
 def history_payload():
