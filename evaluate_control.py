@@ -3,7 +3,7 @@ import json
 import pickle
 import time
 from pathlib import Path
-from station_core import Station, schedule
+from sender.station_core import Station, schedule
 from decision_engine import stabilize
 from ml_train import ARTIFACTS, predict
 

@@ -4,7 +4,7 @@ import math
 import pickle
 import time
 from pathlib import Path
-from station_core import schedule, site_limit_kw, edf_key
+from sender.station_core import schedule, site_limit_kw, edf_key
 from tou_scheduler import apply_tou
 from station_store import DB, database, read_state
 

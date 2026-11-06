@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from contextlib import closing
 from pathlib import Path
-from station_core import Station, Vehicle, schedule, demand_model
+from sender.station_core import Station, Vehicle, schedule, demand_model
 from station_service import process
 
 

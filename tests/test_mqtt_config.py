@@ -6,8 +6,8 @@ import time
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from simulator import configure_connection, apply_public_profile, validate_topic_prefix
-from actuator import Actuator
+from sender.simulator import configure_connection, apply_public_profile, validate_topic_prefix
+from sender.actuator import Actuator
 
 
 class MqttConfigurationTests(unittest.TestCase):

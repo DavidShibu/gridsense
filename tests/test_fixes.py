@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 import numpy as np
-from station_core import Station, schedule
+from sender.station_core import Station, schedule
 from decision_engine import stabilize, load_bundle, _cache
 from ml_train import scores
 

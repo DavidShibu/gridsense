@@ -7,8 +7,8 @@ import math
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, milp
 from scipy.sparse import lil_matrix
-from station_core import site_limit_kw
-from tariff import price_at
+from sender.station_core import site_limit_kw
+from sender.tariff import price_at
 
 CONTROL_HOURS = 1 / 30  # Must match simulator.py's two simulated minutes.
 

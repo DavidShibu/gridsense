@@ -2,10 +2,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from station_core import Station
+from sender.station_core import Station
 from station_store import ingest, database, read_state
 from decision_engine import stabilize, decide
-from simulator import history_payload
+from sender.simulator import history_payload
 
 
 class RubricTests(unittest.TestCase):

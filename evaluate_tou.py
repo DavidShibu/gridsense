@@ -1,9 +1,9 @@
 """Paired deterministic tariff demo; no MQTT publications or production DB writes."""
 import json
 from pathlib import Path
-from station_core import schedule, tou_demo_station
+from sender.station_core import schedule, tou_demo_station
 from tou_scheduler import apply_tou, CONTROL_HOURS
-from tariff import price_at
+from sender.tariff import price_at
 
 
 def evaluate():

@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import patch
-from station_core import Station, Vehicle, schedule
+from sender.station_core import Station, Vehicle, schedule
 from tou_scheduler import apply_tou
-from tariff import price_at, telemetry_fields
+from sender.tariff import price_at, telemetry_fields
 
 
 def plan_for(station):
