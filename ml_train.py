@@ -50,12 +50,15 @@ def scores(y, pred, probabilities=None):
             'samples': len(y)}
 
 
-def train(db=DB, output=ARTIFACTS, dataset='synthetic-history-v5'):
+def train(db=DB, output=ARTIFACTS, dataset=None):
     with database(db) as conn:
+        if dataset is None:
+            latest = conn.execute('SELECT dataset FROM demand_samples ORDER BY rowid DESC LIMIT 1').fetchone()
+            dataset = latest['dataset'] if latest else 'acn-caltech-v1'
         rows = conn.execute('SELECT day,hour,energy_kwh,source FROM demand_samples WHERE dataset=? ORDER BY day,hour', (dataset,)).fetchall()
     days = sorted({r['day'] for r in rows})
     if len(days) < 18 or any(sum(r['day'] == d for r in rows) != 24 for d in days):
-        raise ValueError('Need at least 18 complete days in SQLite. Run simulator.py --history through Node-RED first.')
+        raise ValueError(f'Need at least 18 complete days for {dataset} in SQLite. Run simulator.py --history through Node-RED first.')
     first, second = len(days)*2//3, len(days)*5//6
     groups = [set(days[:first]), set(days[first:second]), set(days[second:])]
     splits = []
@@ -146,6 +149,7 @@ def train(db=DB, output=ARTIFACTS, dataset='synthetic-history-v5'):
                 and m['validation']['rmse_kwh'] <= baseline_val['rmse_kwh']]
     selected = min(eligible, key=lambda n:comparisons[n]['validation']['rmse_kwh']) if eligible else 'constant_baseline'
     report = {'created_at':time.time(), 'dataset':dataset, 'source': sorted({r['source'] for r in rows}),
+              'data_source': 'acn-data-caltech' if rows[0]['source'] == 'acn-data-caltech' else 'synthetic-fallback',
               'training_days':days[:first], 'validation_days':days[first:second], 'test_days':days[second:],
               'classification_definition': f'Actual energy >= {THRESHOLD_KWH} kWh; independent classifier probability >=0.5. Threshold fixed before test evaluation.',
               'imbalance_handling':'Balanced tree/forest/SVC weights; XGBoost training-only class ratio; ANN training-only oversampling; validation/test unchanged.',
@@ -178,6 +182,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--db',type=Path,default=DB)
     parser.add_argument('--output',type=Path,default=ARTIFACTS)
+    parser.add_argument('--dataset', help='Dataset in SQLite (default: most recently ingested; e.g. acn-caltech-v1)')
     args = parser.parse_args()
-    report = train(args.db,args.output)
+    report = train(args.db,args.output,args.dataset)
     print(json.dumps(report,indent=2))

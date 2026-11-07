@@ -45,11 +45,41 @@ solver failure falls back to deadline scheduling. Tariffs are illustrative INR/k
 The `--tou-demo` scenario provides feasible evening requests. The default congested
 scenario deliberately includes demand that cannot all be served by its deadlines.
 
+## Data sources
+
+ACN-Data is the primary configured source: real Caltech workplace charging sessions,
+including connection/departure times, delivered energy and charging-current traces.
+Reference: Zachary J. Lee, Tongxin Li and Steven H. Low, "ACN-Data: Analysis and
+Applications of an Open EV Charging Dataset," ACM e-Energy, 2019.
+Dataset and registration: https://ev.caltech.edu/dataset.
+
+Set ACN_DATA_TOKEN on the project laptop. The latest available complete window is
+queried and cached for 24 hours; this is historical data, not today's live traffic.
+Missing credentials, unavailable service or fewer than 18 observed days trigger the
+clearly logged synthetic fallback. No token or raw session cache is shipped.
+
+SoC is simulated from real current traces and delivered energy. Where vehicle
+identity is available, usable battery capacity comes from the OpenEV Data public
+JSON release (https://open-ev-data.github.io/latest/dataset/HOW_TO_CONSUME/).
+ACN normally does not identify the vehicle, so an explicitly logged 40 kWh assumption
+is often necessary. Initial SoC uses requested energy when available, otherwise an
+assumption informed by taper. The current integral is normalized to delivered energy;
+SoC is capped at 100%, and excess energy is reported. These are model-derived
+trajectories, not measured battery SoC. The CC/CV taper above 80% is simplified.
+Tariffs and the separate ToU scenario remain illustrative simulations.
+
 ## Machine learning and evaluation
 
-History replay sends 1,008 synthetic hourly records (42 days) through MQTT and
-Node-RED to SQLite. Training selects database rows only. The chronological split
-uses 28 training days, seven validation days and seven test days.
+History replay sends ACN hourly demand rows through MQTT and Node-RED to SQLite.
+Each session's total energy is assigned to its arrival hour; this predicts arriving
+energy demand, not measured instantaneous station load. Missing arrival bins inside
+a fully retrieved interval are zeros. Training reads one dataset from SQLite, requires
+18 complete days, and uses chronological training/validation/test splits. The retained
+fallback generates 1,008 rows over 42 days (28/7/7 split). Each classification split
+must contain both classes; unsuitable real windows produce an explicit training error.
+
+The current recorded metrics below use **synthetic-fallback**. They are not real ACN
+prediction scores. The report's data_source field and /health expose provenance.
 
 Five model families cover the three categories in the diagram:
 
@@ -83,13 +113,20 @@ predictions are in `artifacts/classification_predictions.json`.
 
 The recorded local integration test (`artifacts/live_check.json`) verified:
 
-- 1008 historical observations persisted through MQTT/Node-RED.
+- 1,008 active fallback observations persisted through MQTT/Node-RED; the database
+  also contains a separate 1,008-row mocked ACN dataset from integration testing.
 - 5 live cycles and 5 acknowledgements stored.
 - 5 accepted commands and changed actuator telemetry.
 - Dashboard HTTP status 200.
 - Peak observed site load 9.5 kW.
-- Mean sensor-to-actuator response 38.16 ms;
-  p95 response 41.99 ms.
+- Mean sensor-to-actuator response 40.61 ms;
+  p95 response 53.01 ms.
+
+A separate fixture-based ACN integration test (`artifacts/live_check_acn_mock.json`)
+passed MQTT ingestion, five-model training, five control cycles and five acknowledgements.
+These ACN-shaped fixtures prove wiring and provenance handling, not live ACN access.
+No ACN token was configured during verification, so authenticated fetching remains
+unverified. Unit tests mock all ACN and capacity requests and require no network.
 
 This is a short local-loop check, not a sustained or two-physical-laptop network
 benchmark. Cross-laptop latency requires synchronized system clocks.
@@ -117,7 +154,9 @@ broker; connectivity between the user's two physical laptops remains to be teste
 
 Public topics are not access-controlled. The unique namespace reduces collisions
 but does not prevent others reading data or injecting messages. TLS protects the
-connection, not topic privacy. Only synthetic demonstration data is used.
+connection, not topic privacy. The recorded broker test used synthetic data. Do not
+transmit credentials or personal information on public topics; real history replay
+contains hourly aggregates, and prepared fleets contain derived simulation parameters.
 
 ## Reproduction and limitations
 
@@ -127,9 +166,11 @@ model selection, command rejection, safety limits, scheduling and tariff behavio
 `tests/live_check.py` runs the local broker/Node-RED/service/simulator loop.
 
 The sensor and actuator are simulated, socket reassignment is instantaneous and
-battery taper is simplified. The ANN is a multilayer feed-forward network, not an
+battery taper is simplified. Real charging behavior is represented when ACN is
+configured, but SoC remains model-derived. The ANN is a multilayer feed-forward network, not an
 LSTM. Real-world prediction accuracy and physical-hardware control are unverified.
 The demo broker has no authentication or TLS and is intended for a trusted LAN.
-Included pickle models must be trusted and used with compatible Python dependencies;
-retrain if dependency versions differ. Actual grading/upload requirements remain
+The submission installer trains models using the destination laptop dependencies,
+avoiding cross-version pickle incompatibilities. Use Python 3.10 or later; Python 3.11
+was checked. Dependency downloads require internet even for a synthetic demo. Actual grading/upload requirements remain
 those of the receiving institution.

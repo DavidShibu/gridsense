@@ -1,7 +1,17 @@
 """Deterministic EV station, deadline scheduler and demand analytics (no I/O)."""
 import math
 import random
+import logging
+import json
+from pathlib import Path
 from dataclasses import dataclass, asdict
+
+try:
+    import acn_data
+except ImportError:
+    acn_data = None
+
+LOG = logging.getLogger(__name__)
 
 SAFETY_FACTOR = 0.95
 
@@ -86,7 +96,7 @@ class Station:
                 "chargers": self.chargers, "vehicles": rows,
                 "load_kw": self.base_kw + sum(e.power_kw for e in self.vehicles),
                 "applied_sequence": self.last_applied_sequence,
-                "source": "synthetic_python_simulator"}
+                "source": getattr(self, 'data_source', 'synthetic-fallback')}
 
     def accept(self, command):
         # A whole-station plan is validated before any actuator state changes.
@@ -170,6 +180,73 @@ def historical_sessions(days=28, seed=42):
                 rows.append({"day": day, "hour": hour,
                              "energy_kwh": rng.uniform(5, 20)})
     return rows
+
+
+def real_or_synthetic_history(days=42, prefer_real=True):
+    if prefer_real and acn_data is not None:
+        try:
+            if acn_data.LOCAL_DIR.exists():
+                sessions = acn_data.saved_sessions(for_history=True, days=days)
+            else:
+                start, end = acn_data.recent_window(days)
+                sessions = acn_data.fetch_sessions(start=start, end=end)
+            rows = acn_data.to_demand_samples(sessions)
+            active_days = {r['day'] for r in rows}
+            if len(active_days) < 18:
+                raise ValueError('fewer than 18 days with observed sessions')
+            # The API query covers complete local days. Missing hourly arrivals
+            # inside that fully fetched interval are observed zeros, not fake sessions.
+            bins = {(r['day'], r['hour']): r['energy_kwh'] for r in rows}
+            dense = [{'dataset': 'acn-caltech-v1', 'day': d, 'hour': h,
+                      'energy_kwh': bins.get((d, h), 0.0), 'source': 'acn-data-caltech'}
+                     for d in range(max(active_days)+1) for h in range(24)]
+            LOG.warning('Using ACN-Data history: %d sessions, %d complete hourly days', len(sessions), len(dense)//24)
+            # Export only derived fleet parameters for a paho-only sensor laptop.
+            fleet = acn_data.to_vehicle_sessions(sessions)
+            if fleet:
+                target = Path(__file__).with_name('acn_vehicles.json')
+                target.write_text(json.dumps({'source': 'acn-data-caltech', 'vehicles': [asdict(v) for v in fleet]}), encoding='utf-8')
+            return dense
+        except Exception as exc:
+            # Never include provider exception text, URLs or credentials in logs.
+            LOG.warning('[FALLBACK] Using synthetic history (%s)', type(exc).__name__)
+    else:
+        LOG.warning('[FALLBACK] Using synthetic history (%s)', 'forced offline' if not prefer_real else 'ACN module unavailable')
+    return historical_sessions(days, seed=42)
+
+
+def real_or_synthetic_vehicles(prefer_real=True):
+    if prefer_real and acn_data is not None:
+        try:
+            if acn_data.LOCAL_DIR.exists():
+                sessions = acn_data.saved_sessions()
+            else:
+                start, end = acn_data.recent_window(7)
+                sessions = acn_data.fetch_sessions(start=start, end=end)
+            fleet = acn_data.to_vehicle_sessions(sessions)
+            if fleet:
+                return fleet[:6]
+            raise ValueError('No usable ACN vehicles')
+        except Exception as exc:
+            LOG.warning('[FALLBACK] Using synthetic vehicles (%s)', type(exc).__name__)
+    elif prefer_real:
+        # A copied sender/ folder has no data-access packages or token. It can
+        # replay the explicitly exported fleet from the project laptop instead.
+        try:
+            payload = json.loads(Path(__file__).with_name('acn_vehicles.json').read_text(encoding='utf-8'))
+            fleet = [Vehicle(**row) for row in payload['vehicles'][:6]]
+            if payload.get('source') != 'acn-data-caltech' or not fleet:
+                raise ValueError('Invalid prepared fleet')
+            for vehicle in fleet:
+                if not (vehicle.departure > vehicle.arrival and vehicle.capacity > 0 and 0 <= vehicle.soc <= vehicle.target <= 1 and 0 < vehicle.max_kw <= 7):
+                    raise ValueError('Invalid prepared vehicle')
+                vehicle.data_source = 'acn-data-caltech'
+            return fleet
+        except (OSError, ValueError, KeyError, TypeError):
+            LOG.warning('[FALLBACK] Using synthetic vehicles (no prepared ACN fleet)')
+    else:
+        LOG.warning('[FALLBACK] Using synthetic vehicles (forced offline)')
+    return demo_vehicles()
 
 
 def demand_model():

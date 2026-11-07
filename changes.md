@@ -1,4 +1,29 @@
+## Resumable local ACN sessions
+
+- Added incremental downloads to data/acn_downloads, preserving completed sessions on failure or timeout.
+- Live simulation prefers valid saved sessions; historical training only uses sufficiently complete consecutive days, otherwise synthetic fallback.
+- Downloader exports a prepared fleet for the manually transferred sender folder.
+- Added resume, completeness and offline selection tests; 58 unit tests passed. Downloaded 59 sessions (44 pass the minimum-energy/current filter), with two complete days and one partial day; exported six real-session-derived vehicles. ACN logger padding is trimmed before SoC integration.
+
+## Verification of ACN refactor
+
+- 54 unit tests passed on Python 3.11 without external data access.
+- Fallback and mocked ACN MQTT/Node-RED integration paths passed with five actuator acknowledgements each.
+- Extracted runtime ZIP successfully trained all five models on Python 3.11.
+- Live authenticated ACN fetching remains unverified: no token configured.
+
 # GridSense change log
+
+## ACN-Data primary source and portable setup
+
+- Added root `acn_data.py`: ACNPortal 0.3.3 DataClient integration, latest available date discovery, HTTP limits, 24-hour session caching, optional OpenEV release lookup, derived SoC and bounded six-vehicle conversion.
+- Preserved the current `sender/` layout; added a root simulator entry point for project-only data fetching. Prepared ACN fleet parameters can be copied to a paho-only sender.
+- Added `--synthetic-only` and explicit real/fallback source fields. Original deterministic generators and the tariff scenario remain available.
+- Added source-aware dataset selection, model reports and `/health`; full history snapshots replace their own old rows atomically.
+- Updated the SoC gauges to support real session IDs and exposed source labels on the dashboard.
+- Added mocked adapter tests and real-source-fixture integration mode; real ACN network verification still needs ACN_DATA_TOKEN.
+- Fixed the Python 3.11 setup failure: install version ranges and train locally compatible models instead of shipping Python-3.15-specific binaries.
+- Demo ZIP continues to exclude .env files, credentials, caches, downloaded sessions, tests, reports and development tools.
 
 ## Demo-only submission archive
 

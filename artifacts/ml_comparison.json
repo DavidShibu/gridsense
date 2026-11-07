@@ -1,9 +1,10 @@
 {
-  "created_at": 1793986934.8064644,
+  "created_at": 1793993617.981819,
   "dataset": "synthetic-history-v5",
   "source": [
-    "seeded_python_sensor_simulator"
+    "synthetic-fallback"
   ],
+  "data_source": "synthetic-fallback",
   "training_days": [
     0,
     1,
@@ -159,10 +160,10 @@
         "samples": 168
       },
       "computational": {
-        "training_seconds": 0.022238200064748526,
-        "inference_mean_ms": 0.08694600081071258,
-        "inference_p95_ms": 0.10020506451837718,
-        "peak_traced_memory_bytes": 230628,
+        "training_seconds": 0.03884060005657375,
+        "inference_mean_ms": 0.13417799957096577,
+        "inference_p95_ms": 0.18227999098598954,
+        "peak_traced_memory_bytes": 230738,
         "model_size_bytes": 10988,
         "regressor_size_bytes": 5806,
         "classifier_size_bytes": 5182,
@@ -235,10 +236,10 @@
         "samples": 168
       },
       "computational": {
-        "training_seconds": 1.0223853000206873,
-        "inference_mean_ms": 4.709551997948438,
-        "inference_p95_ms": 5.658819933887569,
-        "peak_traced_memory_bytes": 191387,
+        "training_seconds": 1.4166856999509037,
+        "inference_mean_ms": 6.439757999032736,
+        "inference_p95_ms": 7.898624986410141,
+        "peak_traced_memory_bytes": 193889,
         "model_size_bytes": 1299974,
         "regressor_size_bytes": 645339,
         "classifier_size_bytes": 654635,
@@ -311,10 +312,10 @@
         "samples": 168
       },
       "computational": {
-        "training_seconds": 1.970917999977246,
-        "inference_mean_ms": 0.3766600042581558,
-        "inference_p95_ms": 0.5248049623332917,
-        "peak_traced_memory_bytes": 866559,
+        "training_seconds": 2.7140381999779493,
+        "inference_mean_ms": 0.5427700071595609,
+        "inference_p95_ms": 0.6607050774618982,
+        "peak_traced_memory_bytes": 866769,
         "model_size_bytes": 211755,
         "regressor_size_bytes": 106183,
         "classifier_size_bytes": 105572,
@@ -387,10 +388,10 @@
         "samples": 168
       },
       "computational": {
-        "training_seconds": 0.08356279996223748,
-        "inference_mean_ms": 0.444302000105381,
-        "inference_p95_ms": 0.6096050376072525,
-        "peak_traced_memory_bytes": 107512,
+        "training_seconds": 0.11384450003970414,
+        "inference_mean_ms": 0.4734700033441186,
+        "inference_p95_ms": 0.6408399902284145,
+        "peak_traced_memory_bytes": 107162,
         "model_size_bytes": 52700,
         "regressor_size_bytes": 28954,
         "classifier_size_bytes": 23746,
@@ -465,10 +466,10 @@
         "samples": 168
       },
       "computational": {
-        "training_seconds": 0.07715549995191395,
-        "inference_mean_ms": 0.3042780002579093,
-        "inference_p95_ms": 0.42524501914158447,
-        "peak_traced_memory_bytes": 55330,
+        "training_seconds": 0.10747480008285493,
+        "inference_mean_ms": 0.3391099954023957,
+        "inference_p95_ms": 0.4158999596256763,
+        "peak_traced_memory_bytes": 55529,
         "model_size_bytes": 286724,
         "regressor_size_bytes": 148051,
         "classifier_size_bytes": 138673,

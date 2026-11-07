@@ -1,0 +1,14 @@
+{
+  "accepted_commands": 5,
+  "stored_cycles": 5,
+  "stored_acknowledgements": 5,
+  "history_rows": 2016,
+  "dashboard_http": 200,
+  "selected_model": "ensemble_xgboost",
+  "data_source": "acn-data-caltech",
+  "acn_fixture_test": true,
+  "max_observed_load_kw": 5.99,
+  "mean_response_ms": 47.8236198425293,
+  "p95_response_ms": 62.669992446899414,
+  "mean_inference_ms": 0.633000023663044
+}

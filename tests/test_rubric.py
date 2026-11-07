@@ -10,7 +10,7 @@ from sender.simulator import history_payload
 
 class RubricTests(unittest.TestCase):
     def test_independent_dashboard_path_and_topics(self):
-        nodes = json.loads((Path(__file__).parents[1]/'node-red/flows.json').read_text())
+        nodes = json.loads((Path(__file__).parents[1]/'node-red/flows.json').read_text(encoding='utf-8'))
         nodes = {n['id']:n for n in nodes}
         self.assertEqual(nodes['sensor']['topic'],'ev/telemetry')
         self.assertEqual(set(nodes['sensor']['wires'][0]),{'live-filter','request'})
@@ -20,14 +20,14 @@ class RubricTests(unittest.TestCase):
     def test_db_ingest_idempotent_history(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp)/'test.db'
-            ingest(history_payload(),db)
-            ingest(history_payload(),db)
+            ingest(history_payload(synthetic_only=True),db)
+            ingest(history_payload(synthetic_only=True),db)
             with database(db) as conn:
                 self.assertEqual(conn.execute('SELECT count(*) FROM demand_samples').fetchone()[0],1008)
 
     def test_complete_reference_architecture_wiring(self):
         nodes = {n['id']: n for n in json.loads(
-            (Path(__file__).parents[1]/'node-red/flows.json').read_text())}
+            (Path(__file__).parents[1]/'node-red/flows.json').read_text(encoding='utf-8'))}
         # Storage must precede analytics; only the decision path drives MQTT output.
         for source, target in [('request', 'analytics'), ('analytics', 'stored'),
                                ('stored', 'db-decision'), ('db-decision', 'route'),
@@ -87,8 +87,18 @@ class RubricTests(unittest.TestCase):
             db=Path(tmp)/'test.db'
             with self.assertRaises(ValueError):
                 train(db,Path(tmp)/'artifacts')
-            ingest(history_payload(),db)
+            from acn_data import to_demand_samples
+            from test_acn_data import fixture_session
+            sessions = [fixture_session(day=d, hour=h, energy=value)
+                        for d in range(42) for h, value in ((8, 60+d%7), (18, 10+d%4))]
+            sparse = to_demand_samples(sessions)
+            bins = {(r['day'],r['hour']):r['energy_kwh'] for r in sparse}
+            ingest({'kind':'history', 'dataset':'acn-caltech-v1', 'source':'acn-data-caltech',
+                    'samples':[{'day':d,'hour':h,'energy_kwh':bins.get((d,h),0)}
+                               for d in range(42) for h in range(24)]}, db)
             report=train(db,Path(tmp)/'artifacts')
+            self.assertEqual(report['dataset'], 'acn-caltech-v1')
+            self.assertEqual(report['data_source'], 'acn-data-caltech')
             self.assertEqual(len(report['models']),5)
             self.assertIn('traditional_svr', report['models'])
             self.assertIn('ensemble_xgboost', report['models'])

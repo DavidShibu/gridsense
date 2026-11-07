@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parent
 FILES = [
     'setup_demo.ps1', 'start_demo.ps1',
     'requirements-station.txt', 'prepare_demo.py',
+    'acn_data.py', 'simulator.py',
     'mqtt-public.json',
     'sender/simulator.py', 'sender/actuator.py', 'sender/station_core.py',
     'sender/tariff.py', 'sender/mqtt-public.json',
@@ -43,6 +44,9 @@ def build():
     for name in ('package.json', 'package-lock.json'):
         paths['node-red/'+name] = staging/name
     content = {name: path.read_bytes() for name, path in paths.items()}
+    # Explicit allowlist excludes .env, ACN caches, downloaded sessions and tokens.
+    if any(Path(name).name.startswith('.env') for name in content):
+        raise ValueError('Environment files are forbidden in the submission')
     output = ROOT/'submission'/'GridSense_Team3.zip'
     temporary = output.with_suffix('.zip.tmp')
     with ZipFile(temporary, 'w', ZIP_DEFLATED) as archive:

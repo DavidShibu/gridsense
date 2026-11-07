@@ -69,7 +69,7 @@ class StationTests(unittest.TestCase):
             with closing(sqlite3.connect(db)) as conn:
                 self.assertEqual(conn.execute("SELECT count(*) FROM cycles").fetchone()[0], 1)
                 row = conn.execute("SELECT telemetry,decision FROM cycles").fetchone()
-            self.assertEqual(json.loads(row[0])["source"], "synthetic_python_simulator")
+            self.assertEqual(json.loads(row[0])["source"], "synthetic-fallback")
             self.assertIn("assignments", json.loads(row[1]))
 
 

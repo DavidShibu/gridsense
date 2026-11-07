@@ -26,3 +26,10 @@ artifacts/*.pkl
 submission/
 
 .demo-python311/
+.env
+.env.*
+artifacts/acn_cache.json
+artifacts/acn_cache.tmp
+sender/acn_vehicles.json
+
+data/acn_downloads/

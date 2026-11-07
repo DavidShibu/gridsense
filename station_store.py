@@ -36,8 +36,14 @@ def ingest(payload, path=DB):
             for r in rows:
                 if not (0 <= r['hour'] < 24 and r['day'] >= 0 and math.isfinite(r['energy_kwh']) and r['energy_kwh'] >= 0):
                     raise ValueError('Invalid history sample')
-            conn.executemany('INSERT OR IGNORE INTO demand_samples VALUES (?,?,?,?,?)',
+            # Each history message is a complete dataset snapshot. Replace it
+            # atomically so a shorter real window cannot leave stale old days.
+            conn.execute('DELETE FROM demand_samples WHERE dataset=?', (payload['dataset'],))
+            # Refresh rowid order so /health describes the latest replay.
+            conn.executemany('INSERT OR REPLACE INTO demand_samples VALUES (?,?,?,?,?)',
                              [(payload['dataset'], r['day'], r['hour'], r['energy_kwh'], payload['source']) for r in rows])
+            if payload['source'] == 'synthetic-fallback':
+                print('[FALLBACK] Using synthetic history (received and stored)', flush=True)
             return {'stored_history_rows': len(rows)}
         conn.execute('INSERT OR IGNORE INTO cycles VALUES (?,?,?,?,NULL)',
                      (payload['run_id'], payload['sequence'], payload['hour'], json.dumps(payload, allow_nan=False)))

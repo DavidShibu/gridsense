@@ -1,6 +1,7 @@
 <template>
   <section class="gs-ml" v-if="msg?.payload?.decision">
     <div class="gs-section-heading"><div><p class="gs-eyebrow">PREDICTION & PERFORMANCE</p><h2>Intelligence behind each decision</h2></div><span class="gs-pill good">{{ Object.keys(msg.payload.decision.performance.models).length }} models evaluated</span></div>
+    <p>Training data: {{ msg.payload.decision.performance.data_source || 'unreported legacy source' }}</p>
     <div class="gs-model-summary">
       <div><span>Selected model</span><strong>{{ modelName(msg.payload.decision.model) }}</strong></div>
       <div><span>Next-hour energy forecast</span><strong>{{ forecast }}</strong></div>
@@ -20,7 +21,7 @@
     </div>
     <p v-if="!Object.keys(msg.payload.decision.performance.models).length">Train models to populate this table.</p>
     <p class="gs-ml-note">Selected by validation error, with a 100 ms p95 latency limit. Lower RMSE and MAE are better; higher R² and accuracy are better.</p>
-    <details><summary>How to read these metrics</summary><p>Accuracy measures the companion high-demand classifier (energy ≥30 kWh). RMSE, MAE and R² measure the energy regressor. Test scores use held-out synthetic days. The selected model must beat the constant baseline on validation RMSE.</p></details>
+    <details><summary>How to read these metrics</summary><p>Accuracy measures the companion high-demand classifier (energy ≥30 kWh). RMSE, MAE and R² measure the energy regressor. Test scores use held-out days from {{ msg.payload.decision.performance.data_source || 'unreported legacy source' }}. The selected model must beat the constant baseline on validation RMSE.</p></details>
     <details><summary>Closed-loop performance</summary>
       <div class="gs-control-grid"><div v-for="(value, key) in msg.payload.closed_loop" :key="key"><span>{{ metricName(key) }}</span><strong>{{ value === null ? 'Not yet measurable' : typeof value==='number' ? fmt(value,Number.isInteger(value)?0:3) : value }}</strong></div></div>
     </details>

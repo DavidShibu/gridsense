@@ -11,18 +11,27 @@ import getpass
 import threading
 import time
 import uuid
+import logging
 from pathlib import Path
 import paho.mqtt.client as mqtt
-from station_core import Station, historical_sessions, tou_demo_station
-from actuator import Actuator
-from tariff import telemetry_fields
+try:
+    from .station_core import Station, real_or_synthetic_history, real_or_synthetic_vehicles, tou_demo_station
+    from .actuator import Actuator
+    from .tariff import telemetry_fields
+except ImportError:
+    from station_core import Station, real_or_synthetic_history, real_or_synthetic_vehicles, tou_demo_station
+    from actuator import Actuator
+    from tariff import telemetry_fields
 
 
-def history_payload():
-    bins = [[0.0]*24 for _ in range(42)]
-    for r in historical_sessions(days=42):
+def history_payload(synthetic_only=False):
+    rows = real_or_synthetic_history(days=42, prefer_real=not synthetic_only)
+    source = rows[0].get('source', 'synthetic-fallback') if rows else 'synthetic-fallback'
+    days = max((r['day'] for r in rows), default=41)+1
+    bins = [[0.0]*24 for _ in range(days)]
+    for r in rows:
         bins[r['day']][r['hour']] += r['energy_kwh']
-    return {'kind':'history','dataset':'synthetic-history-v5','source':'seeded_python_sensor_simulator',
+    return {'kind':'history','dataset':'acn-caltech-v1' if source == 'acn-data-caltech' else 'synthetic-history-v5','source':source,
             'samples':[{'day':d,'hour':h,'energy_kwh':value}
                        for d, row in enumerate(bins) for h,value in enumerate(row)]}
 
@@ -58,7 +67,9 @@ def validate_topic_prefix(prefix):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
     parser = argparse.ArgumentParser()
+    parser.add_argument('--synthetic-only', action='store_true', help='Force deterministic offline data; do not fetch or use prepared ACN data')
     parser.add_argument('--public-broker', action='store_true', help='Use the shared mqtt-public.json profile with verified TLS and no credentials')
     parser.add_argument('--topic-prefix', default='ev', help='Shared MQTT topic prefix (default: ev for local/private mode)')
     parser.add_argument('--broker-host', default='127.0.0.1', help='MQTT broker address (project laptop LAN IP for two-laptop mode)')
@@ -76,7 +87,21 @@ def main():
     except (ValueError, OSError, KeyError) as exc:
         parser.error(str(exc))
     telemetry_topic = args.topic_prefix + '/telemetry'
-    station, lock = (tou_demo_station() if args.tou_demo else Station()), threading.Lock()
+    # Fetch history before opening MQTT so slow paginated downloads cannot leave
+    # a partially initialized sensor connected. History mode never fetches vehicles twice.
+    history = history_payload(args.synthetic_only) if args.history else None
+    if args.tou_demo:
+        station = tou_demo_station()
+        station.data_source = 'synthetic-tou-demo'
+    elif args.history:
+        station = Station()
+    else:
+        station = Station(real_or_synthetic_vehicles(prefer_real=not args.synthetic_only))
+        station.data_source = getattr(station.vehicles[0], 'data_source', 'synthetic-fallback')
+        if station.data_source == 'acn-data-caltech':
+            station.hour = min(v.arrival for v in station.vehicles)
+            station.refresh()
+    lock = threading.Lock()
     # The hardware rating remains 10 kW; Station enforces a 9.5 kW operating
     # ceiling including base load, independently of received command limits.
     run_id = str(uuid.uuid4())
@@ -105,11 +130,11 @@ def main():
             raise RuntimeError('MQTT connection rejected: ' + connection_errors[0])
         print(f'Connected to {args.broker_host}; publishing {telemetry_topic} and listening on {args.topic_prefix}/actuator.', flush=True)
         if args.history:
-            receipt = client.publish(telemetry_topic,json.dumps(history_payload()),qos=1)
+            receipt = client.publish(telemetry_topic,json.dumps(history),qos=1)
             receipt.wait_for_publish(timeout=10)
             if not receipt.is_published():
                 raise RuntimeError('Broker did not acknowledge history publish')
-            print('Published 1008 historical hourly observations. Check /health for SQLite row count before training.')
+            print(f"Published {len(history['samples'])} hourly observations; source={history['source']}. Check /health before training.")
             return
         while True:
             with lock:

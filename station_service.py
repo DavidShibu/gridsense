@@ -58,7 +58,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         with database() as conn:
             count = conn.execute('SELECT count(*) FROM demand_samples').fetchone()[0]
-        self.respond({'status':'ok','history_rows':count})
+            latest = conn.execute('SELECT dataset,source FROM demand_samples ORDER BY rowid DESC LIMIT 1').fetchone()
+            active_count = conn.execute('SELECT count(*) FROM demand_samples WHERE dataset=?', (latest['dataset'],)).fetchone()[0] if latest else 0
+        self.respond({'status':'ok','history_rows':count, 'active_history_rows':active_count,
+                      'dataset':latest['dataset'] if latest else None,
+                      'data_source':latest['source'] if latest else None})
 
     def do_POST(self):
         try:

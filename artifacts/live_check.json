@@ -2,11 +2,13 @@
   "accepted_commands": 5,
   "stored_cycles": 5,
   "stored_acknowledgements": 5,
-  "history_rows": 1008,
+  "history_rows": 2016,
   "dashboard_http": 200,
   "selected_model": "traditional_decision_tree",
+  "data_source": "synthetic-fallback",
+  "acn_fixture_test": false,
   "max_observed_load_kw": 9.5,
-  "mean_response_ms": 38.16108703613281,
-  "p95_response_ms": 41.98932647705078,
-  "mean_inference_ms": 0.4020399646833539
+  "mean_response_ms": 40.61465263366699,
+  "p95_response_ms": 53.01237106323242,
+  "mean_inference_ms": 0.3773999633267522
 }

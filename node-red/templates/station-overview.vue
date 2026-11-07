@@ -7,6 +7,7 @@
       <div class="gs-hero-status">
         <span :class="['gs-pill', fresh ? 'good' : 'waiting']"><span aria-hidden="true">●</span> {{ !state ? 'Awaiting telemetry' : fresh ? 'Telemetry live' : 'Telemetry stale' }}</span>
         <span>Last sensor update · {{ lastSeen }}</span>
+        <span v-if="state">Data: {{ state.source }} ? SoC is model-derived</span>
         <span v-if="state">Simulation · {{ simTime(state.hour) }}</span>
       </div>
     </header>

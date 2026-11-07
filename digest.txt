@@ -1,9 +1,11 @@
 Directory structure:
 └── gridsense3/
     ├── README.md
+    ├── acn_data.py
     ├── changes.md
     ├── CLOUD_MQTT.md
     ├── decision_engine.py
+    ├── DEMO_README.md
     ├── evaluate_control.py
     ├── evaluate_tou.py
     ├── GridSense_Final_Report.md
@@ -11,11 +13,16 @@ Directory structure:
     ├── ml_train.py
     ├── mqtt-public.json
     ├── package_submission.py
+    ├── prepare_demo.py
     ├── pyproject.toml
     ├── requirements-station.txt
     ├── requirements-tested.txt
+    ├── sender.zip
+    ├── setup_demo.ps1
+    ├── simulator.py
     ├── start.ps1
     ├── start.sh
+    ├── start_demo.ps1
     ├── start_station.ps1
     ├── station_service.py
     ├── station_simulator.py
@@ -27,7 +34,9 @@ Directory structure:
     │   ├── classification_predictions.json
     │   ├── control_comparison.json
     │   ├── control_feasible.json
+    │   ├── demo-processes.json
     │   ├── live_check.json
+    │   ├── live_check_acn_mock.json
     │   ├── ml_comparison.json
     │   ├── public_mqtt_check.json
     │   └── tou_comparison.json
@@ -45,6 +54,7 @@ Directory structure:
     │       ├── price-load.vue
     │       └── station-overview.vue
     ├── sender/
+    │   ├── acn_key.txt
     │   ├── actuator.py
     │   ├── mqtt-public.json
     │   ├── simulator.py
@@ -52,7 +62,9 @@ Directory structure:
     │   └── tariff.py
     └── tests/
         ├── live_check.py
+        ├── mock_acn_sender.py
         ├── public_mqtt_check.py
+        ├── test_acn_data.py
         ├── test_fixes.py
         ├── test_mqtt_config.py
         ├── test_rubric.py
@@ -97,17 +109,15 @@ Install Python 3.10+ and Node.js 20 or later. In the extracted `GridSense` folde
 
 ```powershell
 python -m venv .venv
-./.venv/Scripts/python.exe -m pip install -r requirements-tested.txt
+./.venv/Scripts/python.exe -m pip install -r requirements-station.txt
 npm.cmd ci --prefix node-red
 ```
 
-`requirements-tested.txt` records the Python versions used for the included models;
-`requirements-station.txt` provides supported dependency ranges. If the exact tested
-versions are unavailable for your Python/platform, install the ranged requirements
-and retrain locally before using the model files. Temporarily rename `artifacts/bundle.pkl`
-to `bundle.pkl.saved` before starting the service if a model-version mismatch prevents
-startup; training creates a new compatible bundle. On Linux/macOS use
-`.venv/bin/python`, `npm` and `source .venv/bin/activate`.
+`requirements-station.txt` uses compatible version ranges, including Python 3.11.
+Run `python prepare_demo.py` once after installing dependencies to train a model
+bundle compatible with that environment. This installation step stages real-or-
+fallback history in a temporary SQLite database. The demo ZIP supplies
+`setup_demo.ps1` to automate installation and preparation.
 
 ## Two-laptop demonstration
 
@@ -161,7 +171,7 @@ and `npm --prefix node-red start` in separate terminals; do not run a local simu
 
 ## Train or refresh models
 
-The submission includes trained models and measured JSON reports. SQLite starts
+The demo setup trains locally compatible models; source evaluation reports remain outside the demo ZIP. SQLite starts
 empty on a fresh extraction; the application creates it automatically. To reproduce
 training, keep the project services running and use another terminal:
 
@@ -217,15 +227,580 @@ It contains source, dependency manifests, tests, documentation, models, metrics,
 slides and SHA-256 checksums. It excludes local databases, installed dependencies,
 logs, Git history and the local cleanup backup.
 
-Sensor readings and tariffs are simulated. Real hardware requires a sensor/actuator
-adapter; the demonstration does not establish real-world prediction accuracy.
+ACN session behavior is preferred; SoC, tariffs and actuation remain simulated.
+Real hardware and real-world prediction accuracy remain unverified.
+
+## Real data source (ACN-Data)
+
+ACN-Data is the preferred source for historical charging behavior and replay fleets.
+Register and retrieve an API token at [Caltech ACN-Data](https://ev.caltech.edu/dataset).
+On the **project laptop only**, set `ACN_DATA_TOKEN` in the current terminal (enter
+its value locally, never commit it or paste it into chat):
+
+```powershell
+$env:ACN_DATA_TOKEN = '<your API token>'
+# With the project services already running:
+.\.venv\Scripts\python.exe simulator.py --public-broker --history
+Invoke-RestMethod http://127.0.0.1:8765/health
+.\.venv\Scripts\python.exe ml_train.py
+```
+
+Restart the project after training. `/health` exposes `data_source`, `dataset`,
+`history_rows` and `active_history_rows`. The model report and dashboard also show
+`data_source`. `ml_train.py --dataset acn-caltech-v1` explicitly selects real data;
+otherwise training selects the most recently ingested dataset without mixing sources.
+
+The adapter uses `acnportal.acndata.DataClient(token).get_sessions(...)` from the
+published 0.3.3 release (`acnportal>=0.3.3,<0.4`). Session queries use bounded date
+windows and time series. It discovers the latest available date rather than assuming
+that data extends to today; optionally set `ACN_DATA_END=2020-02-12` to select a
+specific exclusive end date (site-local midnight). The default site is Caltech;
+`acn_data.fetch_sessions` also accepts `jpl` and `office001` for explicit use.
+
+Fetched sessions are cached locally in `artifacts/acn_cache.json` for 24 hours,
+keyed by site/start/end. Calls have HTTP timeouts and a bounded 300-second/5,000-session
+fetch budget; incomplete downloads are rejected instead of reported as complete data.
+The most recent incomplete site-local day is excluded. At least 18 days with observed
+sessions are required; missing arrival hours within the fetched interval are zeros.
+Each session's total delivered energy is assigned to its arrival-hour bin: this is
+arrival-associated energy demand, **not** the measured power consumed in that hour.
+
+If the token is missing, access fails, or data is insufficient, `[FALLBACK] Using
+synthetic history` is logged. The unchanged deterministic generator is used and
+reported as `synthetic-fallback`; prediction validity is limited to the simulation.
+The service logs the fallback when that history reaches SQLite. To force offline data:
+
+```powershell
+.\.venv\Scripts\python.exe simulator.py --public-broker --history --synthetic-only
+```
+
+A successful project-laptop history replay also prepares `sender/acn_vehicles.json`.
+Copy that file alongside the five sender files to **your sensor laptop**, then run
+`python simulator.py --public-broker`. This file contains at most six derived vehicle
+records from the latest session day, not raw current traces or credentials. The sensor
+still installs **only paho-mqtt**. ACNPortal and requests remain project-laptop
+requirements. If no prepared fleet is available, the standalone sensor explicitly
+falls back. `--synthetic-only` bypasses even the prepared fleet. `--tou-demo` remains
+the deliberately synthetic tariff scenario.
+
+ACN-Data normally does not contain measured SoC or a vehicle make/model/year.
+SoC is model-derived from native current timestamps, recorded session energy and
+an assumed/known capacity. OpenEV's documented API requires hosting; the adapter
+uses the project's public JSON release (discovered through its GitHub releases API)
+when vehicle identity is supplied. Unknown/unavailable/ambiguous capacity uses a
+logged **40 kWh assumption**, not an assertion about the actual car. Lookups are
+cached in memory. See [OpenEV data consumption](https://open-ev-data.github.io/latest/dataset/HOW_TO_CONSUME/).
+
+Current, voltage and efficiency determine trajectory shape; the trace is normalized
+to `kWhDelivered`, so the energy-to-SoC convention matches the requested model.
+Requested energy is preferred for initial-SoC inference; observed taper permits an
+explicit 95%-final-SoC assumption, otherwise the supplied/default 30% initial SoC is
+used. SoC is bounded to [0,1], with excess unrepresentable energy reported separately.
+This is a calibrated simulation, not measured battery energy or a BMS model. Current
+power and real SoC are not identified from session energy alone. Overnight departures
+retain their duration; live actuation uses the existing piecewise taper model.
+
+Tokens are read from the environment (or an explicit in-memory API argument), never
+logged or written to cache. The submission ZIP excludes `.env*`, downloaded sessions,
+ACN caches, and prepared fleets. Only aggregate energy/derived fleet data crosses
+MQTT; do not add personal data to public broker messages.
+
+## Saved ACN downloads and offline reuse
+
+Download incrementally on the project laptop after setting ACN_DATA_TOKEN:
+
+```powershell
+.\.venv\Scripts\python.exe acn_data.py --download --seconds 120
+```
+
+Sessions are saved after every response in `data/acn_downloads/caltech-YYYY-MM-DD.json`.
+Run the same command again to resume incomplete pages and skip completed days. The
+seconds limit is checked between requests; an in-flight request can take additional
+time. Each file records whether the whole day was downloaded. Credentials and user
+identity fields are excluded. These durable historical snapshots do not expire like
+the separate 24-hour API cache; rerunning the downloader extends the saved snapshot.
+
+The root simulator automatically prefers this folder, with no token or network
+needed to read it. Live mode can use valid sessions from a partial day. History mode
+requires at least 18 observed days within a contiguous, completely downloaded
+interval. Partial or missing days are never converted to zero-demand training rows.
+Insufficient saved history logs a warning and uses synthetic fallback immediately.
+A live ACN fleet therefore does not imply the ML training data is also ACN; check the
+model report and /health separately. `--synthetic-only` bypasses saved data too.
+
+The downloader also writes `sender/acn_vehicles.json` when usable vehicles exist.
+Include that file when manually sending the sender folder. The standalone sender
+can replay it with only paho-mqtt installed. Raw downloaded sessions remain on the
+project laptop and are excluded from Git and the submission ZIP. The ZIP includes
+the downloader code; download there or copy the data folder separately if needed.
+
+
+
+================================================
+FILE: acn_data.py
+================================================
+"""ACN-Data access, bounded caching, and explicitly model-derived battery SoC.
+
+ACNPortal's published API is DataClient(token).get_sessions(...), not a module
+function. Battery specifications are optional; ACN does not normally identify cars.
+"""
+import hashlib
+import json
+import logging
+import math
+import os
+import threading
+import time
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime, format_datetime
+from functools import lru_cache
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
+
+try:
+    import requests
+except ImportError:
+    requests = None
+try:
+    from acnportal.acndata import DataClient
+except ImportError:
+    DataClient = None
+
+LOG = logging.getLogger(__name__)
+CACHE_PATH = Path(__file__).with_name('artifacts')/'acn_cache.json'
+CACHE_TTL = 24*60*60
+LOCAL_DIR = Path(__file__).with_name('data')/'acn_downloads'
+API = 'https://ev.caltech.edu/api/v1/'
+_client_lock = threading.Lock()
+
+
+class AcnDataError(RuntimeError):
+    pass
+
+
+class AcnDataNotConfigured(AcnDataError):
+    pass
+
+
+def _token(value=None):
+    value = value if value is not None else os.environ.get('ACN_DATA_TOKEN')
+    if not value:
+        raise AcnDataNotConfigured('ACN_DATA_TOKEN is not configured')
+    return value
+
+
+def _datetime(value):
+    if isinstance(value, datetime):
+        result = value
+    else:
+        try:
+            result = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        except ValueError:
+            result = parsedate_to_datetime(str(value))
+    return result.replace(tzinfo=timezone.utc) if result.tzinfo is None else result
+
+
+def _local(session, field):
+    return _datetime(session[field]).astimezone(ZoneInfo(session.get('timezone', 'America/Los_Angeles')))
+
+
+def _read_cache():
+    try:
+        data = json.loads(CACHE_PATH.read_text(encoding='utf-8'))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _cache_get(key):
+    record = _read_cache().get(key, {})
+    age = time.time()-record.get('fetched_at', 0)
+    return record.get('data') if 0 <= age < CACHE_TTL else None
+
+
+def _cache_put(key, data):
+    records = {k: v for k, v in _read_cache().items()
+               if 0 <= time.time()-v.get('fetched_at', 0) < CACHE_TTL}
+    records[key] = {'fetched_at': time.time(), 'data': data}
+    try:
+        CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        temporary = CACHE_PATH.with_suffix('.tmp')
+        temporary.write_text(json.dumps(records, default=lambda x: x.isoformat(), allow_nan=False), encoding='utf-8')
+        temporary.replace(CACHE_PATH)
+    except OSError:
+        LOG.warning('ACN cache could not be written; continuing without disk cache')
+
+
+def _get(url, **kwargs):
+    if requests is None:
+        raise AcnDataNotConfigured('Install project requirements to enable ACN-Data access')
+    response = requests.get(url, timeout=(5, 20), **kwargs)
+    response.raise_for_status()
+    return response
+
+
+def _current_values(session):
+    series = session.get('chargingCurrent') or {}
+    values = series.get('current', []) if isinstance(series, dict) else series
+    if values and isinstance(values[0], dict):
+        values = [point.get('current', point.get('value', 0)) for point in values]
+    return [max(0.0, float(value)) for value in values if math.isfinite(float(value))]
+
+
+def _clean_session(session):
+    cleaned = {k: session[k] for k in ('sessionID', 'connectionTime', 'disconnectTime',
+               'kWhDelivered', 'chargingCurrent', 'timezone', 'make', 'model', 'year') if k in session}
+    cleaned['userInputs'] = [{'kWhRequested': r['kWhRequested']} for r in
+                             (session.get('userInputs') or []) if 'kWhRequested' in r]
+    return cleaned
+
+
+def _write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix('.tmp')
+    temporary.write_text(json.dumps(value, default=lambda x: x.isoformat(), allow_nan=False), encoding='utf-8')
+    temporary.replace(path)
+
+
+def saved_sessions(for_history=False, days=42):
+    """Read durable downloads without a token. Partial days are live-demo only."""
+    records = []
+    for path in sorted(LOCAL_DIR.glob('caltech-*.json')):
+        try:
+            record = json.loads(path.read_text(encoding='utf-8'))
+            if record.get('site') != 'caltech':
+                continue
+            day = datetime.strptime(record['day'], '%Y-%m-%d').date()
+            valid = []
+            for session in record['sessions']:
+                if _local(session, 'connectionTime').date() != day:
+                    raise ValueError('Session outside saved day')
+                energy = float(session['kWhDelivered'])
+                if math.isfinite(energy) and energy >= .5 and max(_current_values(session), default=0) > 0:
+                    valid.append(session)
+            records.append((day, record.get('complete') is True, valid))
+        except (OSError, ValueError, TypeError, KeyError):
+            LOG.warning('Ignoring invalid saved ACN day: %s', path.name)
+    if not for_history:
+        return [s for _, _, sessions in records[-days:] for s in sessions]
+    # Do not turn undownloaded days or partial pages into zero demand.
+    runs, run = [], []
+    for record in records:
+        day, complete, _ = record
+        if not complete or (run and day-run[-1][0] != timedelta(days=1)):
+            if run:
+                runs.append(run)
+            run = []
+        if complete:
+            run.append(record)
+    if run:
+        runs.append(run)
+    for run in reversed(runs):
+        selected = run[-days:]
+        if sum(bool(r[2]) for r in selected) >= 18:
+            LOG.warning('Using saved ACN history: %d completely downloaded days', len(selected))
+            return [s for _, _, sessions in selected for s in sessions]
+    LOG.warning('Saved ACN history is insufficient: need 18 observed days in a completely downloaded interval')
+    raise AcnDataError('Saved history needs 18 observed days in a completely downloaded interval')
+
+
+def download_local(days=42, seconds=120):
+    """Resume per-day pages, saving every received session; keep partial progress."""
+    credential = _token()
+    start, end = recent_window(days)
+    deadline = time.monotonic()+seconds
+    LOCAL_DIR.mkdir(parents=True, exist_ok=True)
+    day = start
+    while day < end and time.monotonic() < deadline:
+        path = LOCAL_DIR/('caltech-'+day.date().isoformat()+'.json')
+        record = {'site': 'caltech', 'day': day.date().isoformat(), 'complete': False,
+                  'next_page': 1, 'sessions': []}
+        if path.exists():
+            record = json.loads(path.read_text(encoding='utf-8'))
+        if record['complete']:
+            day += timedelta(days=1)
+            continue
+        until = day+timedelta(days=1)
+        cond = f'connectionTime >= "{format_datetime(day.astimezone(timezone.utc), usegmt=True)}" and connectionTime < "{format_datetime(until.astimezone(timezone.utc), usegmt=True)}"'
+        try:
+            while time.monotonic() < deadline:
+                response = _get(API+'sessions/caltech/ts/', auth=(credential, ''),
+                                params={'where': cond, 'sort': 'connectionTime', 'max_results': 1,
+                                        'page': record['next_page']})
+                payload = response.json()
+                items = payload['_items']
+                if not isinstance(items, list) or '_links' not in payload:
+                    raise AcnDataError('Invalid paginated response')
+                known = {s['sessionID'] for s in record['sessions']}
+                for item in items:
+                    clean = _clean_session(item)
+                    if clean['sessionID'] not in known:
+                        record['sessions'].append(clean)
+                        known.add(clean['sessionID'])
+                        _write_json(path, record)
+                record['next_page'] += 1
+                record['complete'] = 'next' not in payload['_links']
+                _write_json(path, record)
+                LOG.warning('Saved ACN %s: %d sessions (%s)', record['day'], len(record['sessions']),
+                            'complete day' if record['complete'] else 'partial day')
+                if record['complete']:
+                    break
+        except Exception as exc:
+            LOG.warning('ACN download paused (%s); saved progress retained', type(exc).__name__)
+            break
+        day = until
+    sessions = saved_sessions()
+    LOG.warning('Saved usable ACN sessions: %d; folder: %s', len(sessions), LOCAL_DIR)
+    return sessions
+
+
+def fetch_sessions(site='caltech', start=None, end=None, min_kwh=0.5, token=None):
+    """Return filtered time-series sessions for an explicitly bounded UTC window."""
+    credential = _token(token)  # Never cache credentials, authentication headers or exception text.
+    if site not in ('caltech', 'jpl', 'office001'):
+        raise ValueError('Unsupported ACN site')
+    if start is None or end is None:
+        raise ValueError('start and end are required')
+    start, end = _datetime(start).astimezone(timezone.utc), _datetime(end).astimezone(timezone.utc)
+    if end <= start or end-start > timedelta(days=62):
+        raise ValueError('ACN queries must cover more than zero and at most 62 days')
+    if not math.isfinite(min_kwh) or min_kwh < 0:
+        raise ValueError('min_kwh must be nonnegative')
+    key = json.dumps([site, start.isoformat(), end.isoformat()])
+    sessions = _cache_get(key)
+    if sessions is None:
+        if DataClient is None:
+            raise AcnDataNotConfigured('acnportal is not installed')
+        cond = f'connectionTime >= "{format_datetime(start, usegmt=True)}" and connectionTime <= "{format_datetime(end, usegmt=True)}"'
+        try:
+            # ACNPortal 0.3.3 has no timeout argument. Scope a timeout-capable
+            # transport to its module only; do not change global requests.get.
+            with _client_lock, patch('acnportal.acndata.data_client.requests', SimpleNamespace(get=_get)):
+                client = DataClient(credential)
+                sessions = []
+                started = time.monotonic()
+                for session in client.get_sessions(site, cond=cond, timeseries=True):
+                    if time.monotonic()-started > 300 or len(sessions) >= 5000:
+                        raise AcnDataError('ACN query exceeded bounded demo fetch limits')
+                    # Strip user identity and unneeded fields before storing or exporting.
+                    cleaned = {k: session[k] for k in ('sessionID', 'connectionTime', 'disconnectTime',
+                               'kWhDelivered', 'chargingCurrent', 'timezone', 'make', 'model', 'year') if k in session}
+                    cleaned['userInputs'] = [{'kWhRequested': row['kWhRequested']} for row in
+                                             (session.get('userInputs') or []) if 'kWhRequested' in row]
+                    if start <= _datetime(cleaned['connectionTime']) < end:
+                        sessions.append(cleaned)
+            _cache_put(key, sessions)
+        except Exception as exc:
+            raise AcnDataError('ACN fetch failed ('+type(exc).__name__+')') from None
+    result = []
+    for session in sessions:
+        try:
+            energy = float(session['kWhDelivered'])
+            if math.isfinite(energy) and energy >= min_kwh and max(_current_values(session), default=0) > 0:
+                result.append(session)
+        except (ValueError, TypeError, KeyError):
+            continue
+    return result
+
+
+def recent_window(days=42, site='caltech'):
+    """Most recent *available* complete site-local days, not the current calendar."""
+    credential = _token()
+    if not 1 <= days <= 62 or site not in ('caltech', 'jpl', 'office001'):
+        raise ValueError('Invalid recent window')
+    override = os.environ.get('ACN_DATA_END')
+    if override and len(override) == 10:
+        end = datetime.strptime(override, '%Y-%m-%d').replace(tzinfo=ZoneInfo('America/Los_Angeles'))
+        return end-timedelta(days=days), end
+    latest = {'connectionTime': override, 'timezone': 'America/Los_Angeles'} if override else _cache_get('latest:'+site)
+    if latest is None:
+        try:
+            response = _get(API+'sessions/'+site, params={'sort': '-connectionTime', 'max_results': 1}, auth=(credential, ''))
+            row = response.json()['_items'][0]
+            latest = {'connectionTime': row['connectionTime'], 'timezone': row.get('timezone', 'America/Los_Angeles')}
+            _cache_put('latest:'+site, latest)
+        except Exception as exc:
+            raise AcnDataError('Latest ACN date unavailable ('+type(exc).__name__+')') from None
+    end = _local(latest, 'connectionTime').replace(hour=0, minute=0, second=0, microsecond=0)
+    return end-timedelta(days=days), end
+
+
+@lru_cache(maxsize=1)
+def _ev_catalog():
+    # The supplied website documents an API implementation, not a stable public
+    # API hostname. Consume its documented public JSON release over HTTPS.
+    release = _get('https://api.github.com/repos/open-ev-data/open-ev-data-dataset/releases/latest').json()
+    assets = [a for a in release.get('assets', []) if a['name'].endswith('.json') and 'open-ev-data' in a['name']]
+    if not assets:
+        raise ValueError('No OpenEV JSON release found')
+    payload = _get(assets[0]['browser_download_url']).json()
+    return payload.get('vehicles', []) if isinstance(payload, dict) else payload
+
+
+@lru_cache(maxsize=256)
+def battery_capacity_for(make=None, model=None, year=None):
+    if make and model and year:
+        try:
+            matches = [row for row in _ev_catalog() if
+                       str(row.get('brand', row.get('make', ''))).casefold() == str(make).casefold()
+                       and str(row.get('model', '')).casefold() == str(model).casefold()
+                       and str(row.get('year', '')) == str(year)]
+            values = {float(row['battery']['pack_capacity_kwh_net']) for row in matches
+                      if row.get('battery', {}).get('pack_capacity_kwh_net')}
+            if len(values) == 1 and 0 < next(iter(values)) <= 250:
+                return values.pop()
+        except Exception:
+            pass
+    LOG.warning('Battery capacity unknown or lookup unavailable; using assumed 40 kWh')
+    return 40.0
+
+
+def simulate_soc_trace(session, capacity_kwh=None, initial_soc=0.3, voltage=208, efficiency=0.9):
+    capacity = float(capacity_kwh if capacity_kwh is not None else battery_capacity_for(
+        session.get('make'), session.get('model'), session.get('year')))
+    energy = float(session['kWhDelivered'])
+    if not all(math.isfinite(v) for v in (capacity, energy, initial_soc, voltage, efficiency)) or capacity <= 0 or energy < 0 or voltage <= 0 or not 0 < efficiency <= 1 or not 0 <= initial_soc <= 1:
+        raise ValueError('Invalid SoC model inputs')
+    arrival, departure = _local(session, 'connectionTime'), _local(session, 'disconnectTime')
+    duration = (departure.astimezone(timezone.utc)-arrival.astimezone(timezone.utc)).total_seconds()/3600
+    if duration <= 0:
+        raise ValueError('Invalid session duration')
+    series = session.get('chargingCurrent') or {}
+    currents = _current_values(session)
+    if not currents or max(currents) <= 0:
+        raise ValueError('Missing positive current samples')
+    timestamps = series.get('timestamps', []) if isinstance(series, dict) else []
+    if timestamps:
+        if len(timestamps) != len(currents):
+            raise ValueError('Current and timestamp lengths differ')
+        times = [_datetime(t).astimezone(timezone.utc) for t in timestamps]
+        if any(b <= a for a, b in zip(times, times[1:])):
+            raise ValueError('Current timestamps must increase')
+        # ACN includes logger padding before connection and after disconnect.
+        # Integrate only measured samples inside the actual connected interval.
+        pairs = [(t, c) for t, c in zip(times, currents)
+                 if arrival.astimezone(timezone.utc) <= t <= departure.astimezone(timezone.utc)]
+        if len(pairs) < 2 or max(c for _, c in pairs) <= 0:
+            raise ValueError('Insufficient current samples inside the session')
+        times, currents = map(list, zip(*pairs))
+    else:
+        # Numeric fixture/legacy traces have an explicitly inferred sample period.
+        times = [arrival.astimezone(timezone.utc)+timedelta(hours=duration*i/max(1, len(currents)-1)) for i in range(len(currents))]
+    peak = max(currents)
+    tail = currents[-max(1, math.ceil(len(currents)*.2)):]
+    taper = sum(tail)/len(tail) < .5*peak
+    estimate, assumption = initial_soc, 'supplied/default initial SoC'
+    requested = next((r.get('kWhRequested') for r in reversed(session.get('userInputs') or [])
+                      if r.get('kWhRequested') is not None), None)
+    if requested is not None and math.isfinite(float(requested)) and float(requested) >= 0:
+        estimate = min(.95, max(.05, 1-float(requested)/capacity))
+        assumption = 'inferred from requested energy and assumed full target'
+    elif taper:
+        estimate = min(.95, max(.05, .95-energy/capacity))
+        assumption = 'inferred from observed taper and assumed 95% final SoC'
+    final = min(1.0, estimate+energy/capacity)
+    weights = [0.0]
+    cumulative = 0.0
+    for i in range(1, len(currents)):
+        dt = (times[i]-times[i-1]).total_seconds()/3600
+        provisional = estimate+cumulative/capacity
+        # Preserve already-observed taper; otherwise apply a simple CV shape.
+        factor = 1.0 if taper or provisional <= .8 else max(.05, (1-provisional)/.2)
+        weight = .5*(currents[i-1]+currents[i])*voltage/1000*efficiency*dt*factor
+        cumulative += weight
+        weights.append(weight)
+    total = sum(weights)
+    if len(currents) < 2 or total <= 0:
+        raise ValueError('Insufficient current integration interval')
+    accumulated = 0.0
+    points = []
+    for timestamp, weight in zip(times, weights):
+        accumulated += weight
+        points.append({'t': timestamp.isoformat(), 'soc': min(final, estimate+(final-estimate)*accumulated/total)})
+    points[-1]['soc'] = final
+    return {'soc_series': points, 'initial_soc_estimate': estimate, 'initial_soc_assumption': assumption,
+            'final_soc': final, 'capacity_kwh': capacity, 'max_kw_observed': peak*voltage/1000,
+            'taper_observed': taper, 'arrival_hour': arrival.hour+arrival.minute/60+arrival.second/3600,
+            'departure_hour': departure.hour+departure.minute/60+departure.second/3600,
+            'duration_hours': duration, 'soc_source': 'model-derived, not measured',
+            'unrepresented_energy_kwh': max(0.0, energy-(final-estimate)*capacity),
+            'energy_convention': 'Current/efficiency determine shape; normalized to recorded kWhDelivered; SoC capped at 1'}
+
+
+def to_demand_samples(sessions, dataset='acn-caltech-v1'):
+    if not sessions:
+        return []
+    earliest = min(_local(s, 'connectionTime').date() for s in sessions)
+    bins = {}
+    for session in sessions:
+        local = _local(session, 'connectionTime')
+        energy = float(session['kWhDelivered'])
+        if not math.isfinite(energy) or energy < 0:
+            raise ValueError('Invalid delivered energy')
+        key = ((local.date()-earliest).days, local.hour)
+        bins[key] = bins.get(key, 0)+energy
+    return [{'dataset': dataset, 'day': d, 'hour': h, 'energy_kwh': value,
+             'source': 'acn-data-caltech'} for (d, h), value in sorted(bins.items())]
+
+
+def to_vehicle_sessions(sessions, capacity_lookup=battery_capacity_for):
+    from sender.station_core import Vehicle
+    if not sessions:
+        return []
+    # Replay one coherent latest day, rather than folding unrelated days together.
+    latest = max(_local(s, 'connectionTime').date() for s in sessions)
+    fleet, ids = [], set()
+    for session in sorted(sessions, key=lambda s: _datetime(s['connectionTime'])):
+        if _local(session, 'connectionTime').date() != latest:
+            continue
+        try:
+            capacity = capacity_lookup(session.get('make'), session.get('model'), session.get('year'))
+            trace = simulate_soc_trace(session, capacity)
+            identifier = str(session['sessionID'])[:8]
+            if identifier in ids:
+                identifier = hashlib.sha256(str(session['sessionID']).encode()).hexdigest()[:8]
+            target = min(trace['initial_soc_estimate']+float(session['kWhDelivered'])/capacity+.05, .95)
+            if target <= trace['initial_soc_estimate']:
+                continue
+            vehicle = Vehicle(identifier, trace['arrival_hour'], trace['arrival_hour']+trace['duration_hours'],
+                              capacity, trace['initial_soc_estimate'], target, min(trace['max_kw_observed'], 7.0))
+            vehicle.soc_trace = trace  # In memory only; not added to the SQLite schema or MQTT payload.
+            vehicle.data_source = 'acn-data-caltech'
+            fleet.append(vehicle)
+            ids.add(identifier)
+            if len(fleet) == 6:
+                break
+        except (ValueError, TypeError, KeyError):
+            continue
+    return fleet
+
+
+if __name__ == '__main__':
+    import argparse
+    from dataclasses import asdict
+    parser = argparse.ArgumentParser(description='Download resumable ACN sessions into data/acn_downloads')
+    parser.add_argument('--download', action='store_true', required=True)
+    parser.add_argument('--days', type=int, default=42)
+    parser.add_argument('--seconds', type=int, default=120)
+    args = parser.parse_args()
+    if args.seconds <= 0:
+        parser.error('--seconds must be positive')
+    logging.basicConfig(level=logging.WARNING, format='%(levelname)s %(message)s')
+    sessions = download_local(args.days, args.seconds)
+    fleet = to_vehicle_sessions(sessions)
+    if fleet:
+        _write_json(Path(__file__).with_name('sender')/'acn_vehicles.json',
+                    {'source': 'acn-data-caltech', 'vehicles': [asdict(v) for v in fleet]})
+        print('Prepared sender/acn_vehicles.json with', len(fleet), 'vehicles')
 
 
 
 ================================================
 FILE: changes.md
 ================================================
-Error reading file with 'cp1252': 'charmap' codec can't decode byte 0x9d in position 2360: character maps to <undefined>
+Error reading file with 'cp1252': 'charmap' codec can't decode byte 0x9d in position 5392: character maps to <undefined>
 
 
 ================================================
@@ -252,7 +827,7 @@ The shared `mqtt-public.json` selects these topics:
 
 Both laptops must have the same copy of that file. Unique topics reduce collisions;
 they are not private or authenticated. Other public-broker users can read messages
-or publish to these topics. Use synthetic data only. TLS verifies the server and
+or publish to these topics. Do not publish personal data; the ACN adapter sends only aggregate/derived demo data. TLS verifies the server and
 encrypts transport; it does not restrict other clients' topic access. See the
 [official public broker information](https://www.emqx.com/en/mqtt/public-mqtt5-broker).
 
@@ -324,8 +899,9 @@ python simulator.py --public-broker --history
 
 On the project laptop, wait until `http://127.0.0.1:8765/health` reports 1,008 history
 rows, then run `python ml_train.py` using the project environment. Restart the
-project launcher to load refreshed models. History is synthetic and is sent through
-the same public broker. The submission already includes trained model artifacts.
+project launcher to load refreshed models. Run history replay from the project root to enable ACN fetching. It uses the
+same public broker and explicitly labels real versus fallback data. Demo setup
+trains local models; it does not ship cross-version model binaries.
 
 ## Other modes and troubleshooting
 
@@ -346,6 +922,110 @@ the same public broker. The submission already includes trained model artifacts.
 
 If another team uses this submission independently, choose a different unique
 `topic_prefix` in `mqtt-public.json`, copy it to both laptops and restart both sides.
+
+## Real data source (ACN-Data)
+
+ACN-Data is the preferred source for historical charging behavior and replay fleets.
+Register and retrieve an API token at [Caltech ACN-Data](https://ev.caltech.edu/dataset).
+On the **project laptop only**, set `ACN_DATA_TOKEN` in the current terminal (enter
+its value locally, never commit it or paste it into chat):
+
+```powershell
+$env:ACN_DATA_TOKEN = '<your API token>'
+# With the project services already running:
+.\.venv\Scripts\python.exe simulator.py --public-broker --history
+Invoke-RestMethod http://127.0.0.1:8765/health
+.\.venv\Scripts\python.exe ml_train.py
+```
+
+Restart the project after training. `/health` exposes `data_source`, `dataset`,
+`history_rows` and `active_history_rows`. The model report and dashboard also show
+`data_source`. `ml_train.py --dataset acn-caltech-v1` explicitly selects real data;
+otherwise training selects the most recently ingested dataset without mixing sources.
+
+The adapter uses `acnportal.acndata.DataClient(token).get_sessions(...)` from the
+published 0.3.3 release (`acnportal>=0.3.3,<0.4`). Session queries use bounded date
+windows and time series. It discovers the latest available date rather than assuming
+that data extends to today; optionally set `ACN_DATA_END=2020-02-12` to select a
+specific exclusive end date (site-local midnight). The default site is Caltech;
+`acn_data.fetch_sessions` also accepts `jpl` and `office001` for explicit use.
+
+Fetched sessions are cached locally in `artifacts/acn_cache.json` for 24 hours,
+keyed by site/start/end. Calls have HTTP timeouts and a bounded 300-second/5,000-session
+fetch budget; incomplete downloads are rejected instead of reported as complete data.
+The most recent incomplete site-local day is excluded. At least 18 days with observed
+sessions are required; missing arrival hours within the fetched interval are zeros.
+Each session's total delivered energy is assigned to its arrival-hour bin: this is
+arrival-associated energy demand, **not** the measured power consumed in that hour.
+
+If the token is missing, access fails, or data is insufficient, `[FALLBACK] Using
+synthetic history` is logged. The unchanged deterministic generator is used and
+reported as `synthetic-fallback`; prediction validity is limited to the simulation.
+The service logs the fallback when that history reaches SQLite. To force offline data:
+
+```powershell
+.\.venv\Scripts\python.exe simulator.py --public-broker --history --synthetic-only
+```
+
+A successful project-laptop history replay also prepares `sender/acn_vehicles.json`.
+Copy that file alongside the five sender files to **your sensor laptop**, then run
+`python simulator.py --public-broker`. This file contains at most six derived vehicle
+records from the latest session day, not raw current traces or credentials. The sensor
+still installs **only paho-mqtt**. ACNPortal and requests remain project-laptop
+requirements. If no prepared fleet is available, the standalone sensor explicitly
+falls back. `--synthetic-only` bypasses even the prepared fleet. `--tou-demo` remains
+the deliberately synthetic tariff scenario.
+
+ACN-Data normally does not contain measured SoC or a vehicle make/model/year.
+SoC is model-derived from native current timestamps, recorded session energy and
+an assumed/known capacity. OpenEV's documented API requires hosting; the adapter
+uses the project's public JSON release (discovered through its GitHub releases API)
+when vehicle identity is supplied. Unknown/unavailable/ambiguous capacity uses a
+logged **40 kWh assumption**, not an assertion about the actual car. Lookups are
+cached in memory. See [OpenEV data consumption](https://open-ev-data.github.io/latest/dataset/HOW_TO_CONSUME/).
+
+Current, voltage and efficiency determine trajectory shape; the trace is normalized
+to `kWhDelivered`, so the energy-to-SoC convention matches the requested model.
+Requested energy is preferred for initial-SoC inference; observed taper permits an
+explicit 95%-final-SoC assumption, otherwise the supplied/default 30% initial SoC is
+used. SoC is bounded to [0,1], with excess unrepresentable energy reported separately.
+This is a calibrated simulation, not measured battery energy or a BMS model. Current
+power and real SoC are not identified from session energy alone. Overnight departures
+retain their duration; live actuation uses the existing piecewise taper model.
+
+Tokens are read from the environment (or an explicit in-memory API argument), never
+logged or written to cache. The submission ZIP excludes `.env*`, downloaded sessions,
+ACN caches, and prepared fleets. Only aggregate energy/derived fleet data crosses
+MQTT; do not add personal data to public broker messages.
+
+## Saved ACN downloads and offline reuse
+
+Download incrementally on the project laptop after setting ACN_DATA_TOKEN:
+
+```powershell
+.\.venv\Scripts\python.exe acn_data.py --download --seconds 120
+```
+
+Sessions are saved after every response in `data/acn_downloads/caltech-YYYY-MM-DD.json`.
+Run the same command again to resume incomplete pages and skip completed days. The
+seconds limit is checked between requests; an in-flight request can take additional
+time. Each file records whether the whole day was downloaded. Credentials and user
+identity fields are excluded. These durable historical snapshots do not expire like
+the separate 24-hour API cache; rerunning the downloader extends the saved snapshot.
+
+The root simulator automatically prefers this folder, with no token or network
+needed to read it. Live mode can use valid sessions from a partial day. History mode
+requires at least 18 observed days within a contiguous, completely downloaded
+interval. Partial or missing days are never converted to zero-demand training rows.
+Insufficient saved history logs a warning and uses synthetic fallback immediately.
+A live ACN fleet therefore does not imply the ML training data is also ACN; check the
+model report and /health separately. `--synthetic-only` bypasses saved data too.
+
+The downloader also writes `sender/acn_vehicles.json` when usable vehicles exist.
+Include that file when manually sending the sender folder. The standalone sender
+can replay it with only paho-mqtt installed. Raw downloaded sessions remain on the
+project laptop and are excluded from Git and the submission ZIP. The ZIP includes
+the downloader code; download there or copy the data folder separately if needed.
 
 
 
@@ -463,6 +1143,223 @@ def decide(key, path=DB, bundle_path=None, tou_enabled=True):
     with database(path) as conn:
         conn.execute('UPDATE cycles SET decision=? WHERE run_id=? AND sequence=?',(json.dumps(plan),key['run_id'],key['sequence']))
     return {'state':state,'decision':plan}
+
+
+
+================================================
+FILE: DEMO_README.md
+================================================
+# GridSense - run the demonstration
+
+This package contains only the files used to run the application and sensor demo.
+The project laptop runs Node-RED, SQLite, ML and the dashboard. The sensor laptop
+publishes simulated readings through `broker.emqx.io:8883` using verified TLS.
+
+## 1. Set up sir's Windows laptop (once)
+
+Install Python 3.10 or newer (Python 3.11 is supported) and Node.js 20 or later,
+with both available on PATH. Setup installs compatible versions using
+`requirements-station.txt`. Installing dependencies requires internet access.
+The ZIP does not include Python, Node.js, a virtual environment or node_modules.
+
+Extract the ZIP, open PowerShell in its `GridSense` folder, then run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup_demo.ps1
+```
+
+This creates a local Python environment, installs compatible dependencies and
+trains five demo models for that environment, preferring ACN data when configured. It does not modify your permanent
+execution policy. Training may take a few minutes on a slower laptop.
+
+Model preparation is an installation step: real-or-fallback history is staged
+in a temporary SQLite database, then the models are trained from those records.
+Only the resulting runtime bundle is kept. The live demo still uses the full
+MQTT -> Node-RED -> SQLite -> ML/decision -> MQTT flow.
+
+## 2. Start the project on sir's laptop
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start_demo.ps1
+```
+
+Open **http://127.0.0.1:1880/dashboard/station** in the browser. Keep the PowerShell
+window open. Do not run another copy of Node-RED or the project on ports 1880/8765.
+
+## 3. Start the sensor
+
+Copy the entire `sender` folder to the sensor laptop. It contains five runtime files, plus an optional prepared ACN fleet;
+do not remove `station_core.py` or `tariff.py` from the project laptop because
+the decision engine also imports them.
+
+Open a terminal inside the copied `sender` folder and run:
+
+```bash
+python -m pip install "paho-mqtt>=2.1,<3"
+python simulator.py --public-broker --tou-demo
+```
+
+The evening scenario demonstrates tariff-aware charging. Omit `--tou-demo` for
+the default congested scenario. Both laptops need internet, but may use different
+Wi-Fi networks. Keep the same `mqtt-public.json` on both sides. No account, MQTT
+password, manual Node-RED configuration or router port forwarding is required.
+
+For a one-laptop demonstration, keep `start_demo.ps1` running and open a second
+PowerShell window in `GridSense`:
+
+```powershell
+.\.venv\Scripts\python.exe sender\simulator.py --public-broker --tou-demo
+```
+
+Even in this mode, messages travel through the internet MQTT broker.
+
+## 4. Check the result and stop
+
+The dashboard shows incoming readings, model comparison and charging decisions.
+Open http://127.0.0.1:1880 for the Node-RED editor; accepted acknowledgement
+messages in its debug sidebar confirm the return control path. Press Ctrl+C in
+both the project and sensor terminals when finished.
+
+The live SQLite database is created automatically on first use. Setup creates
+`artifacts/bundle.pkl` with the selected trained model and all five model-comparison
+results. `artifacts/runtime.json` records the local dependency versions. No model
+trained under another Python environment is shipped in the ZIP. To force fully
+offline preparation, run `setup_demo.ps1 -SyntheticOnly`.
+
+## Retraining
+
+If you change Python or ML package versions, stop the project and rerun
+`setup_demo.ps1` to rebuild a compatible bundle. For an explicit demonstration
+of history ingestion through the broker, keep the project running.
+In a second project terminal:
+
+```powershell
+.\.venv\Scripts\python.exe sender\simulator.py --public-broker --history
+Invoke-RestMethod http://127.0.0.1:8765/health
+# Wait until history_rows is 1008, then:
+.\.venv\Scripts\python.exe ml_train.py
+```
+
+Restart `start_demo.ps1` after training. The history replay remains synthetic and
+follows MQTT -> Node-RED -> SQLite before training reads the database.
+
+## Troubleshooting and limits
+
+- No readings: check both internet connections, sender output and outbound TCP 8883.
+- Service exits: read `service.err.log` and `nodered.err.log` created in this folder.
+- TLS errors: check system clock and certificate trust; do not disable verification.
+- Use only one live sensor for the shared topic prefix. Synchronize laptop clocks
+  for meaningful response-time measurements.
+- The public broker is shared and may be unavailable. Topics are not private;
+  only simulated data should be sent. TLS does not prevent others publishing to
+  public topics. The demo controls simulated actuators, not physical equipment.
+
+Tests, reports, slides, logs, backups, databases and development utilities are
+intentionally omitted from this demo package.
+
+## Real data source (ACN-Data)
+
+ACN-Data is the preferred source for historical charging behavior and replay fleets.
+Register and retrieve an API token at [Caltech ACN-Data](https://ev.caltech.edu/dataset).
+On the **project laptop only**, set `ACN_DATA_TOKEN` in the current terminal (enter
+its value locally, never commit it or paste it into chat):
+
+```powershell
+$env:ACN_DATA_TOKEN = '<your API token>'
+# With the project services already running:
+.\.venv\Scripts\python.exe simulator.py --public-broker --history
+Invoke-RestMethod http://127.0.0.1:8765/health
+.\.venv\Scripts\python.exe ml_train.py
+```
+
+Restart the project after training. `/health` exposes `data_source`, `dataset`,
+`history_rows` and `active_history_rows`. The model report and dashboard also show
+`data_source`. `ml_train.py --dataset acn-caltech-v1` explicitly selects real data;
+otherwise training selects the most recently ingested dataset without mixing sources.
+
+The adapter uses `acnportal.acndata.DataClient(token).get_sessions(...)` from the
+published 0.3.3 release (`acnportal>=0.3.3,<0.4`). Session queries use bounded date
+windows and time series. It discovers the latest available date rather than assuming
+that data extends to today; optionally set `ACN_DATA_END=2020-02-12` to select a
+specific exclusive end date (site-local midnight). The default site is Caltech;
+`acn_data.fetch_sessions` also accepts `jpl` and `office001` for explicit use.
+
+Fetched sessions are cached locally in `artifacts/acn_cache.json` for 24 hours,
+keyed by site/start/end. Calls have HTTP timeouts and a bounded 300-second/5,000-session
+fetch budget; incomplete downloads are rejected instead of reported as complete data.
+The most recent incomplete site-local day is excluded. At least 18 days with observed
+sessions are required; missing arrival hours within the fetched interval are zeros.
+Each session's total delivered energy is assigned to its arrival-hour bin: this is
+arrival-associated energy demand, **not** the measured power consumed in that hour.
+
+If the token is missing, access fails, or data is insufficient, `[FALLBACK] Using
+synthetic history` is logged. The unchanged deterministic generator is used and
+reported as `synthetic-fallback`; prediction validity is limited to the simulation.
+The service logs the fallback when that history reaches SQLite. To force offline data:
+
+```powershell
+.\.venv\Scripts\python.exe simulator.py --public-broker --history --synthetic-only
+```
+
+A successful project-laptop history replay also prepares `sender/acn_vehicles.json`.
+Copy that file alongside the five sender files to **your sensor laptop**, then run
+`python simulator.py --public-broker`. This file contains at most six derived vehicle
+records from the latest session day, not raw current traces or credentials. The sensor
+still installs **only paho-mqtt**. ACNPortal and requests remain project-laptop
+requirements. If no prepared fleet is available, the standalone sensor explicitly
+falls back. `--synthetic-only` bypasses even the prepared fleet. `--tou-demo` remains
+the deliberately synthetic tariff scenario.
+
+ACN-Data normally does not contain measured SoC or a vehicle make/model/year.
+SoC is model-derived from native current timestamps, recorded session energy and
+an assumed/known capacity. OpenEV's documented API requires hosting; the adapter
+uses the project's public JSON release (discovered through its GitHub releases API)
+when vehicle identity is supplied. Unknown/unavailable/ambiguous capacity uses a
+logged **40 kWh assumption**, not an assertion about the actual car. Lookups are
+cached in memory. See [OpenEV data consumption](https://open-ev-data.github.io/latest/dataset/HOW_TO_CONSUME/).
+
+Current, voltage and efficiency determine trajectory shape; the trace is normalized
+to `kWhDelivered`, so the energy-to-SoC convention matches the requested model.
+Requested energy is preferred for initial-SoC inference; observed taper permits an
+explicit 95%-final-SoC assumption, otherwise the supplied/default 30% initial SoC is
+used. SoC is bounded to [0,1], with excess unrepresentable energy reported separately.
+This is a calibrated simulation, not measured battery energy or a BMS model. Current
+power and real SoC are not identified from session energy alone. Overnight departures
+retain their duration; live actuation uses the existing piecewise taper model.
+
+Tokens are read from the environment (or an explicit in-memory API argument), never
+logged or written to cache. The submission ZIP excludes `.env*`, downloaded sessions,
+ACN caches, and prepared fleets. Only aggregate energy/derived fleet data crosses
+MQTT; do not add personal data to public broker messages.
+
+## Saved ACN downloads and offline reuse
+
+Download incrementally on the project laptop after setting ACN_DATA_TOKEN:
+
+```powershell
+.\.venv\Scripts\python.exe acn_data.py --download --seconds 120
+```
+
+Sessions are saved after every response in `data/acn_downloads/caltech-YYYY-MM-DD.json`.
+Run the same command again to resume incomplete pages and skip completed days. The
+seconds limit is checked between requests; an in-flight request can take additional
+time. Each file records whether the whole day was downloaded. Credentials and user
+identity fields are excluded. These durable historical snapshots do not expire like
+the separate 24-hour API cache; rerunning the downloader extends the saved snapshot.
+
+The root simulator automatically prefers this folder, with no token or network
+needed to read it. Live mode can use valid sessions from a partial day. History mode
+requires at least 18 observed days within a contiguous, completely downloaded
+interval. Partial or missing days are never converted to zero-demand training rows.
+Insufficient saved history logs a warning and uses synthetic fallback immediately.
+A live ACN fleet therefore does not imply the ML training data is also ACN; check the
+model report and /health separately. `--synthetic-only` bypasses saved data too.
+
+The downloader also writes `sender/acn_vehicles.json` when usable vehicles exist.
+Include that file when manually sending the sender folder. The standalone sender
+can replay it with only paho-mqtt installed. Raw downloaded sessions remain on the
+project laptop and are excluded from Git and the submission ZIP. The ZIP includes
+the downloader code; download there or copy the data folder separately if needed.
 
 
 
@@ -646,11 +1543,41 @@ solver failure falls back to deadline scheduling. Tariffs are illustrative INR/k
 The `--tou-demo` scenario provides feasible evening requests. The default congested
 scenario deliberately includes demand that cannot all be served by its deadlines.
 
+## Data sources
+
+ACN-Data is the primary configured source: real Caltech workplace charging sessions,
+including connection/departure times, delivered energy and charging-current traces.
+Reference: Zachary J. Lee, Tongxin Li and Steven H. Low, "ACN-Data: Analysis and
+Applications of an Open EV Charging Dataset," ACM e-Energy, 2019.
+Dataset and registration: https://ev.caltech.edu/dataset.
+
+Set ACN_DATA_TOKEN on the project laptop. The latest available complete window is
+queried and cached for 24 hours; this is historical data, not today's live traffic.
+Missing credentials, unavailable service or fewer than 18 observed days trigger the
+clearly logged synthetic fallback. No token or raw session cache is shipped.
+
+SoC is simulated from real current traces and delivered energy. Where vehicle
+identity is available, usable battery capacity comes from the OpenEV Data public
+JSON release (https://open-ev-data.github.io/latest/dataset/HOW_TO_CONSUME/).
+ACN normally does not identify the vehicle, so an explicitly logged 40 kWh assumption
+is often necessary. Initial SoC uses requested energy when available, otherwise an
+assumption informed by taper. The current integral is normalized to delivered energy;
+SoC is capped at 100%, and excess energy is reported. These are model-derived
+trajectories, not measured battery SoC. The CC/CV taper above 80% is simplified.
+Tariffs and the separate ToU scenario remain illustrative simulations.
+
 ## Machine learning and evaluation
 
-History replay sends 1,008 synthetic hourly records (42 days) through MQTT and
-Node-RED to SQLite. Training selects database rows only. The chronological split
-uses 28 training days, seven validation days and seven test days.
+History replay sends ACN hourly demand rows through MQTT and Node-RED to SQLite.
+Each session's total energy is assigned to its arrival hour; this predicts arriving
+energy demand, not measured instantaneous station load. Missing arrival bins inside
+a fully retrieved interval are zeros. Training reads one dataset from SQLite, requires
+18 complete days, and uses chronological training/validation/test splits. The retained
+fallback generates 1,008 rows over 42 days (28/7/7 split). Each classification split
+must contain both classes; unsuitable real windows produce an explicit training error.
+
+The current recorded metrics below use **synthetic-fallback**. They are not real ACN
+prediction scores. The report's data_source field and /health expose provenance.
 
 Five model families cover the three categories in the diagram:
 
@@ -684,13 +1611,20 @@ predictions are in `artifacts/classification_predictions.json`.
 
 The recorded local integration test (`artifacts/live_check.json`) verified:
 
-- 1008 historical observations persisted through MQTT/Node-RED.
+- 1,008 active fallback observations persisted through MQTT/Node-RED; the database
+  also contains a separate 1,008-row mocked ACN dataset from integration testing.
 - 5 live cycles and 5 acknowledgements stored.
 - 5 accepted commands and changed actuator telemetry.
 - Dashboard HTTP status 200.
 - Peak observed site load 9.5 kW.
-- Mean sensor-to-actuator response 38.16 ms;
-  p95 response 41.99 ms.
+- Mean sensor-to-actuator response 40.61 ms;
+  p95 response 53.01 ms.
+
+A separate fixture-based ACN integration test (`artifacts/live_check_acn_mock.json`)
+passed MQTT ingestion, five-model training, five control cycles and five acknowledgements.
+These ACN-shaped fixtures prove wiring and provenance handling, not live ACN access.
+No ACN token was configured during verification, so authenticated fetching remains
+unverified. Unit tests mock all ACN and capacity requests and require no network.
 
 This is a short local-loop check, not a sustained or two-physical-laptop network
 benchmark. Cross-laptop latency requires synchronized system clocks.
@@ -718,7 +1652,9 @@ broker; connectivity between the user's two physical laptops remains to be teste
 
 Public topics are not access-controlled. The unique namespace reduces collisions
 but does not prevent others reading data or injecting messages. TLS protects the
-connection, not topic privacy. Only synthetic demonstration data is used.
+connection, not topic privacy. The recorded broker test used synthetic data. Do not
+transmit credentials or personal information on public topics; real history replay
+contains hourly aggregates, and prepared fleets contain derived simulation parameters.
 
 ## Reproduction and limitations
 
@@ -728,11 +1664,13 @@ model selection, command rejection, safety limits, scheduling and tariff behavio
 `tests/live_check.py` runs the local broker/Node-RED/service/simulator loop.
 
 The sensor and actuator are simulated, socket reassignment is instantaneous and
-battery taper is simplified. The ANN is a multilayer feed-forward network, not an
+battery taper is simplified. Real charging behavior is represented when ACN is
+configured, but SoC remains model-derived. The ANN is a multilayer feed-forward network, not an
 LSTM. Real-world prediction accuracy and physical-hardware control are unverified.
 The demo broker has no authentication or TLS and is intended for a trusted LAN.
-Included pickle models must be trusted and used with compatible Python dependencies;
-retrain if dependency versions differ. Actual grading/upload requirements remain
+The submission installer trains models using the destination laptop dependencies,
+avoiding cross-version pickle incompatibilities. Use Python 3.10 or later; Python 3.11
+was checked. Dependency downloads require internet even for a synthetic demo. Actual grading/upload requirements remain
 those of the receiving institution.
 
 
@@ -798,12 +1736,15 @@ def scores(y, pred, probabilities=None):
             'samples': len(y)}
 
 
-def train(db=DB, output=ARTIFACTS, dataset='synthetic-history-v5'):
+def train(db=DB, output=ARTIFACTS, dataset=None):
     with database(db) as conn:
+        if dataset is None:
+            latest = conn.execute('SELECT dataset FROM demand_samples ORDER BY rowid DESC LIMIT 1').fetchone()
+            dataset = latest['dataset'] if latest else 'acn-caltech-v1'
         rows = conn.execute('SELECT day,hour,energy_kwh,source FROM demand_samples WHERE dataset=? ORDER BY day,hour', (dataset,)).fetchall()
     days = sorted({r['day'] for r in rows})
     if len(days) < 18 or any(sum(r['day'] == d for r in rows) != 24 for d in days):
-        raise ValueError('Need at least 18 complete days in SQLite. Run simulator.py --history through Node-RED first.')
+        raise ValueError(f'Need at least 18 complete days for {dataset} in SQLite. Run simulator.py --history through Node-RED first.')
     first, second = len(days)*2//3, len(days)*5//6
     groups = [set(days[:first]), set(days[first:second]), set(days[second:])]
     splits = []
@@ -894,6 +1835,7 @@ def train(db=DB, output=ARTIFACTS, dataset='synthetic-history-v5'):
                 and m['validation']['rmse_kwh'] <= baseline_val['rmse_kwh']]
     selected = min(eligible, key=lambda n:comparisons[n]['validation']['rmse_kwh']) if eligible else 'constant_baseline'
     report = {'created_at':time.time(), 'dataset':dataset, 'source': sorted({r['source'] for r in rows}),
+              'data_source': 'acn-data-caltech' if rows[0]['source'] == 'acn-data-caltech' else 'synthetic-fallback',
               'training_days':days[:first], 'validation_days':days[first:second], 'test_days':days[second:],
               'classification_definition': f'Actual energy >= {THRESHOLD_KWH} kWh; independent classifier probability >=0.5. Threshold fixed before test evaluation.',
               'imbalance_handling':'Balanced tree/forest/SVC weights; XGBoost training-only class ratio; ANN training-only oversampling; validation/test unchanged.',
@@ -926,8 +1868,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--db',type=Path,default=DB)
     parser.add_argument('--output',type=Path,default=ARTIFACTS)
+    parser.add_argument('--dataset', help='Dataset in SQLite (default: most recently ingested; e.g. acn-caltech-v1)')
     args = parser.parse_args()
-    report = train(args.db,args.output)
+    report = train(args.db,args.output,args.dataset)
     print(json.dumps(report,indent=2))
 
 
@@ -946,57 +1889,126 @@ FILE: mqtt-public.json
 ================================================
 FILE: package_submission.py
 ================================================
-"""Build a complete submission from an explicit allowlist, with SHA-256 checksums."""
+"""Build the demo-only ZIP from an explicit runtime allowlist."""
 import hashlib
 import json
+import shutil
+import subprocess
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parent
 FILES = [
-    'README.md', 'changes.md', 'CLOUD_MQTT.md', 'GridSense_Final_Report.md', 'GridSense_Presentation.pptx',
-    'refererncesss.png', 'pyproject.toml', 'requirements-station.txt',
-    'requirements-tested.txt', 'package_submission.py',
-    'mqtt-public.json', 'node-red/build-public-flow.cjs',
-    'simulator.py', 'actuator.py', 'station_core.py', 'station_simulator.py',
+    'setup_demo.ps1', 'start_demo.ps1',
+    'requirements-station.txt', 'prepare_demo.py',
+    'acn_data.py', 'simulator.py',
+    'mqtt-public.json',
+    'sender/simulator.py', 'sender/actuator.py', 'sender/station_core.py',
+    'sender/tariff.py', 'sender/mqtt-public.json',
     'station_store.py', 'station_service.py', 'decision_engine.py',
-    'ml_train.py', 'tariff.py', 'tou_scheduler.py',
-    'evaluate_control.py', 'evaluate_tou.py', 'verify_diagnoses.py',
-    'start.ps1', 'start_station.ps1', 'start.sh',
-    'node-red/flows.json', 'node-red/settings.js', 'node-red/package.json',
-    'node-red/package-lock.json', 'node-red/demo-broker.cjs',
-    'node-red/build-presentation.cjs', 'node-red/validate-upgrades.cjs',
+    'ml_train.py', 'tou_scheduler.py',
+    'node-red/flows.json', 'node-red/settings.js', 'node-red/build-public-flow.cjs',
 ]
 
 
 def build():
-    files = set(FILES)
-    for pattern in ('tests/*.py', 'node-red/templates/*.vue', 'artifacts/*.json', 'artifacts/*.pkl'):
-        files.update(p.relative_to(ROOT).as_posix() for p in ROOT.glob(pattern))
-    missing = [name for name in sorted(files) if not (ROOT/name).is_file()]
+    paths = {name: ROOT/name for name in FILES}
+    paths['README.md'] = ROOT/'DEMO_README.md'
+    missing = [str(p) for p in paths.values() if not p.is_file()]
     if missing:
-        raise FileNotFoundError('Missing submission files: ' + ', '.join(missing))
-    manifest = {name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in sorted(files)}
+        raise FileNotFoundError('Required runtime files missing: ' + ', '.join(missing))
+    if json.loads((ROOT/'mqtt-public.json').read_text()) != json.loads((ROOT/'sender/mqtt-public.json').read_text()):
+        raise ValueError('Project and sender MQTT profiles must match')
+    # Keep presentation tooling and local-broker dev dependencies out of the demo.
+    staging = ROOT/'submission'/'runtime-node'
+    staging.mkdir(parents=True, exist_ok=True)
+    package = json.loads((ROOT/'node-red/package.json').read_text())
+    package.pop('devDependencies', None)
+    package['scripts'] = {'start': 'node-red --userDir . --settings settings.js flows.public.json'}
+    (staging/'package.json').write_text(json.dumps(package, indent=2))
+    (staging/'package-lock.json').write_bytes((ROOT/'node-red/package-lock.json').read_bytes())
+    npm = shutil.which('npm.cmd') or shutil.which('npm')
+    if not npm:
+        raise RuntimeError('npm is required to prepare the runtime dependency lock')
+    subprocess.run([npm, 'install', '--package-lock-only', '--ignore-scripts', '--offline',
+                    '--no-audit', '--no-fund', '--prefix', str(staging)], check=True)
+    for name in ('package.json', 'package-lock.json'):
+        paths['node-red/'+name] = staging/name
+    content = {name: path.read_bytes() for name, path in paths.items()}
+    # Explicit allowlist excludes .env, ACN caches, downloaded sessions and tokens.
+    if any(Path(name).name.startswith('.env') for name in content):
+        raise ValueError('Environment files are forbidden in the submission')
     output = ROOT/'submission'/'GridSense_Team3.zip'
-    output.parent.mkdir(exist_ok=True)
     temporary = output.with_suffix('.zip.tmp')
     with ZipFile(temporary, 'w', ZIP_DEFLATED) as archive:
-        for name in sorted(files):
-            archive.write(ROOT/name, 'GridSense/'+name)
-        archive.writestr('GridSense/SUBMISSION_MANIFEST.json', json.dumps(manifest, indent=2))
+        for name, data in sorted(content.items()):
+            archive.writestr('GridSense/'+name, data)
     with ZipFile(temporary) as archive:
         if archive.testzip() is not None:
             raise RuntimeError('ZIP integrity check failed')
-        for name, digest in manifest.items():
-            if hashlib.sha256(archive.read('GridSense/'+name)).hexdigest() != digest:
-                raise RuntimeError('Checksum mismatch: ' + name)
+        for name, data in content.items():
+            if hashlib.sha256(archive.read('GridSense/'+name)).digest() != hashlib.sha256(data).digest():
+                raise RuntimeError('Checksum mismatch: '+name)
     temporary.replace(output)
     print(output)
-    print(f'{len(files)} files plus manifest; {output.stat().st_size:,} bytes; integrity verified.')
+    print(f'{len(content)} runtime/demo files; {output.stat().st_size:,} bytes; integrity verified.')
 
 
 if __name__ == '__main__':
     build()
+
+
+
+================================================
+FILE: prepare_demo.py
+================================================
+"""Train compatible demo models locally using synthetic history staged in SQLite.
+
+This is offline installation-time preparation, not live sensor ingestion. The
+running application still uses MQTT -> Node-RED -> SQLite -> decision -> MQTT.
+"""
+import json
+import shutil
+import sys
+import tempfile
+from importlib.metadata import version
+from pathlib import Path
+
+from sender.simulator import history_payload
+from station_store import ingest
+from ml_train import train
+
+
+def prepare(root=None, synthetic_only=False):
+    root = Path(root) if root is not None else Path(__file__).resolve().parent
+    payload = history_payload(synthetic_only=synthetic_only)
+    print('Preparing five models for this Python environment; please wait...', flush=True)
+    with tempfile.TemporaryDirectory(prefix='gridsense-setup-') as tmp:
+        temporary = Path(tmp)
+        db = temporary/'training.db'
+        ingest(payload, db)
+        report = train(db, temporary/'models')
+        target = root/'artifacts'
+        target.mkdir(parents=True, exist_ok=True)
+        pending = target/'bundle.tmp'
+        shutil.copyfile(temporary/'models/bundle.pkl', pending)
+        pending.replace(target/'bundle.pkl')
+        shutil.copyfile(temporary/'models/ml_comparison.json', target/'ml_comparison.json')
+    metadata = {'python': sys.version.split()[0],
+                'packages': {p: version(p) for p in ('numpy', 'scikit-learn', 'scipy', 'xgboost')},
+                'selected_model': report['selected_model'], 'training_rows': len(payload['samples']),
+                'data_source':report['data_source'],
+                'preparation': 'installation-time history staged in temporary SQLite (live ingestion uses MQTT)'}
+    (target/'runtime.json').write_text(json.dumps(metadata, indent=2), encoding='utf-8')
+    print('Local models ready. Selected: '+report['selected_model'], flush=True)
+    return metadata
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--synthetic-only', action='store_true')
+    prepare(synthetic_only=parser.parse_args().synthetic_only)
 
 
 
@@ -1015,6 +2027,9 @@ dependencies = [
     "scikit-learn>=1.4,<2",
     "scipy>=1.11,<2",
     "xgboost>=2.1,<4",
+    "acnportal>=0.3.3,<0.4",
+    "requests>=2.31,<3",
+    "tzdata>=2024.1",
 ]
 
 [tool.uv]
@@ -1030,6 +2045,9 @@ numpy>=1.26,<3
 scikit-learn>=1.4,<2
 scipy>=1.11,<2
 xgboost>=2.1,<4
+acnportal>=0.3.3,<0.4
+requests>=2.31,<3
+tzdata>=2024.1
 
 
 
@@ -1044,6 +2062,52 @@ scipy==1.18.1
 xgboost==3.4.1
 joblib==1.6.0
 threadpoolctl==3.7.0
+
+
+
+================================================
+FILE: sender.zip
+================================================
+[Binary file]
+
+
+================================================
+FILE: setup_demo.ps1
+================================================
+param([switch]$SyntheticOnly)
+$ErrorActionPreference = 'Stop'
+Set-Location $PSScriptRoot
+Get-Command python -ErrorAction Stop | Out-Null
+Get-Command node -ErrorAction Stop | Out-Null
+Get-Command npm.cmd -ErrorAction Stop | Out-Null
+if (-not (Test-Path '.venv/Scripts/python.exe')) {
+    & python -m venv .venv
+    if ($LASTEXITCODE -ne 0) { throw 'Could not create the Python environment.' }
+}
+& '.\.venv\Scripts\python.exe' -c 'import sys; sys.exit(0 if sys.version_info >= (3,10) else "Python 3.10 or newer is required")'
+if ($LASTEXITCODE -ne 0) { throw 'The existing .venv needs Python 3.10 or newer.' }
+& '.\.venv\Scripts\python.exe' -m pip install -r requirements-station.txt
+if ($LASTEXITCODE -ne 0) { throw 'Python dependency installation failed. See the Python compatibility instructions in README.md.' }
+& npm.cmd ci --prefix node-red --omit=dev --no-audit --no-fund
+if ($LASTEXITCODE -ne 0) { throw 'Node-RED dependency installation failed.' }
+if ($SyntheticOnly) {
+    & '.\.venv\Scripts\python.exe' prepare_demo.py --synthetic-only
+} else {
+    & '.\.venv\Scripts\python.exe' prepare_demo.py
+}
+if ($LASTEXITCODE -ne 0) { throw 'Local model preparation failed. Check the error above.' }
+Write-Host 'Setup complete. Run ./start_demo.ps1.'
+
+
+
+================================================
+FILE: simulator.py
+================================================
+"""Project-laptop entry point; keeps ACN access outside the standalone sender folder."""
+from sender.simulator import main, history_payload
+
+if __name__ == '__main__':
+    main()
 
 
 
@@ -1067,6 +2131,40 @@ python simulator.py > station.log 2>&1 & simulator_pid=$!
 trap 'kill "$service_pid" "$red_pid" "$simulator_pid" 2>/dev/null || true' EXIT INT TERM
 echo "Dashboard: http://127.0.0.1:1880/dashboard/station"
 wait -n
+
+
+
+================================================
+FILE: start_demo.ps1
+================================================
+$ErrorActionPreference = 'Stop'
+Set-Location $PSScriptRoot
+$pythonPath = Join-Path $PSScriptRoot '.venv/Scripts/python.exe'
+if (-not (Test-Path -LiteralPath $pythonPath) -or -not (Test-Path 'node-red/node_modules/node-red/red.js')) {
+    throw 'Run ./setup_demo.ps1 first.'
+}
+$nodePath = (Get-Command node).Source
+& $nodePath 'node-red/build-public-flow.cjs'
+if ($LASTEXITCODE -ne 0) { throw 'Public MQTT flow generation failed.' }
+$workers = @()
+try {
+    $workers += Start-Process $pythonPath -ArgumentList 'station_service.py' -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput 'service.log' -RedirectStandardError 'service.err.log'
+    $workers += Start-Process $nodePath -ArgumentList 'node_modules/node-red/red.js --userDir . --settings settings.js flows.public.json' -WorkingDirectory "$PSScriptRoot/node-red" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$PSScriptRoot/nodered.log" -RedirectStandardError "$PSScriptRoot/nodered.err.log"
+    Write-Host 'Dashboard: http://127.0.0.1:1880/dashboard/station'
+    Write-Host 'On the sensor laptop, inside sender/: python simulator.py --public-broker'
+    Write-Host 'Keep this window open. Press Ctrl+C to stop.'
+    while ($true) {
+        Start-Sleep -Seconds 2
+        foreach ($worker in $workers) {
+            $worker.Refresh()
+            if ($worker.HasExited) { throw 'A service exited. Check service.err.log and nodered.err.log.' }
+        }
+    }
+} finally {
+    foreach ($worker in $workers) {
+        if (-not $worker.HasExited) { Stop-Process -Id $worker.Id -ErrorAction SilentlyContinue }
+    }
+}
 
 
 
@@ -1198,7 +2296,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         with database() as conn:
             count = conn.execute('SELECT count(*) FROM demand_samples').fetchone()[0]
-        self.respond({'status':'ok','history_rows':count})
+            latest = conn.execute('SELECT dataset,source FROM demand_samples ORDER BY rowid DESC LIMIT 1').fetchone()
+            active_count = conn.execute('SELECT count(*) FROM demand_samples WHERE dataset=?', (latest['dataset'],)).fetchone()[0] if latest else 0
+        self.respond({'status':'ok','history_rows':count, 'active_history_rows':active_count,
+                      'dataset':latest['dataset'] if latest else None,
+                      'data_source':latest['source'] if latest else None})
 
     def do_POST(self):
         try:
@@ -1285,8 +2387,14 @@ def ingest(payload, path=DB):
             for r in rows:
                 if not (0 <= r['hour'] < 24 and r['day'] >= 0 and math.isfinite(r['energy_kwh']) and r['energy_kwh'] >= 0):
                     raise ValueError('Invalid history sample')
-            conn.executemany('INSERT OR IGNORE INTO demand_samples VALUES (?,?,?,?,?)',
+            # Each history message is a complete dataset snapshot. Replace it
+            # atomically so a shorter real window cannot leave stale old days.
+            conn.execute('DELETE FROM demand_samples WHERE dataset=?', (payload['dataset'],))
+            # Refresh rowid order so /health describes the latest replay.
+            conn.executemany('INSERT OR REPLACE INTO demand_samples VALUES (?,?,?,?,?)',
                              [(payload['dataset'], r['day'], r['hour'], r['energy_kwh'], payload['source']) for r in rows])
+            if payload['source'] == 'synthetic-fallback':
+                print('[FALLBACK] Using synthetic history (received and stored)', flush=True)
             return {'stored_history_rows': len(rows)}
         conn.execute('INSERT OR IGNORE INTO cycles VALUES (?,?,?,?,NULL)',
                      (payload['run_id'], payload['sequence'], payload['hour'], json.dumps(payload, allow_nan=False)))
@@ -2640,19 +3748,50 @@ FILE: artifacts/control_feasible.json
 
 
 ================================================
+FILE: artifacts/demo-processes.json
+================================================
+{
+    "sender_pid":  8444,
+    "host_pid":  8236
+}
+
+
+
+================================================
 FILE: artifacts/live_check.json
 ================================================
 {
   "accepted_commands": 5,
   "stored_cycles": 5,
   "stored_acknowledgements": 5,
-  "history_rows": 1008,
+  "history_rows": 2016,
   "dashboard_http": 200,
   "selected_model": "traditional_decision_tree",
+  "data_source": "synthetic-fallback",
+  "acn_fixture_test": false,
   "max_observed_load_kw": 9.5,
-  "mean_response_ms": 38.16108703613281,
-  "p95_response_ms": 41.98932647705078,
-  "mean_inference_ms": 0.4020399646833539
+  "mean_response_ms": 40.61465263366699,
+  "p95_response_ms": 53.01237106323242,
+  "mean_inference_ms": 0.3773999633267522
+}
+
+
+================================================
+FILE: artifacts/live_check_acn_mock.json
+================================================
+{
+  "accepted_commands": 5,
+  "stored_cycles": 5,
+  "stored_acknowledgements": 5,
+  "history_rows": 2016,
+  "dashboard_http": 200,
+  "selected_model": "ensemble_xgboost",
+  "data_source": "acn-data-caltech",
+  "acn_fixture_test": true,
+  "max_observed_load_kw": 5.99,
+  "mean_response_ms": 47.8236198425293,
+  "p95_response_ms": 62.669992446899414,
+  "mean_inference_ms": 0.633000023663044
 }
 
 
@@ -2660,11 +3799,12 @@ FILE: artifacts/live_check.json
 FILE: artifacts/ml_comparison.json
 ================================================
 {
-  "created_at": 1793986934.8064644,
+  "created_at": 1793993617.981819,
   "dataset": "synthetic-history-v5",
   "source": [
-    "seeded_python_sensor_simulator"
+    "synthetic-fallback"
   ],
+  "data_source": "synthetic-fallback",
   "training_days": [
     0,
     1,
@@ -2820,10 +3960,10 @@ FILE: artifacts/ml_comparison.json
         "samples": 168
       },
       "computational": {
-        "training_seconds": 0.022238200064748526,
-        "inference_mean_ms": 0.08694600081071258,
-        "inference_p95_ms": 0.10020506451837718,
-        "peak_traced_memory_bytes": 230628,
+        "training_seconds": 0.03884060005657375,
+        "inference_mean_ms": 0.13417799957096577,
+        "inference_p95_ms": 0.18227999098598954,
+        "peak_traced_memory_bytes": 230738,
         "model_size_bytes": 10988,
         "regressor_size_bytes": 5806,
         "classifier_size_bytes": 5182,
@@ -2896,10 +4036,10 @@ FILE: artifacts/ml_comparison.json
         "samples": 168
       },
       "computational": {
-        "training_seconds": 1.0223853000206873,
-        "inference_mean_ms": 4.709551997948438,
-        "inference_p95_ms": 5.658819933887569,
-        "peak_traced_memory_bytes": 191387,
+        "training_seconds": 1.4166856999509037,
+        "inference_mean_ms": 6.439757999032736,
+        "inference_p95_ms": 7.898624986410141,
+        "peak_traced_memory_bytes": 193889,
         "model_size_bytes": 1299974,
         "regressor_size_bytes": 645339,
         "classifier_size_bytes": 654635,
@@ -2972,10 +4112,10 @@ FILE: artifacts/ml_comparison.json
         "samples": 168
       },
       "computational": {
-        "training_seconds": 1.970917999977246,
-        "inference_mean_ms": 0.3766600042581558,
-        "inference_p95_ms": 0.5248049623332917,
-        "peak_traced_memory_bytes": 866559,
+        "training_seconds": 2.7140381999779493,
+        "inference_mean_ms": 0.5427700071595609,
+        "inference_p95_ms": 0.6607050774618982,
+        "peak_traced_memory_bytes": 866769,
         "model_size_bytes": 211755,
         "regressor_size_bytes": 106183,
         "classifier_size_bytes": 105572,
@@ -3048,10 +4188,10 @@ FILE: artifacts/ml_comparison.json
         "samples": 168
       },
       "computational": {
-        "training_seconds": 0.08356279996223748,
-        "inference_mean_ms": 0.444302000105381,
-        "inference_p95_ms": 0.6096050376072525,
-        "peak_traced_memory_bytes": 107512,
+        "training_seconds": 0.11384450003970414,
+        "inference_mean_ms": 0.4734700033441186,
+        "inference_p95_ms": 0.6408399902284145,
+        "peak_traced_memory_bytes": 107162,
         "model_size_bytes": 52700,
         "regressor_size_bytes": 28954,
         "classifier_size_bytes": 23746,
@@ -3126,10 +4266,10 @@ FILE: artifacts/ml_comparison.json
         "samples": 168
       },
       "computational": {
-        "training_seconds": 0.07715549995191395,
-        "inference_mean_ms": 0.3042780002579093,
-        "inference_p95_ms": 0.42524501914158447,
-        "peak_traced_memory_bytes": 55330,
+        "training_seconds": 0.10747480008285493,
+        "inference_mean_ms": 0.3391099954023957,
+        "inference_p95_ms": 0.4158999596256763,
+        "peak_traced_memory_bytes": 55529,
         "model_size_bytes": 286724,
         "regressor_size_bytes": 148051,
         "classifier_size_bytes": 138673,
@@ -6867,14 +8007,15 @@ const slides = [
   ['Two-laptop architecture', 'Sensor laptop: Python sensor and actuator simulation\nTelemetry -> broker.emqx.io (TLS 8883) -> project Node-RED\nPath A: direct live dashboard\nPath B: SQLite commit -> database read -> ML -> decision\nCommands -> public broker -> sensor; acknowledgements -> project database'],
   ['Sensor and actuator', 'Six EVs; two charger sockets; 10 kW rated supply.\n1 kW base load; 9.5 kW total operating cap.\nReadings published every two seconds.\nActuator validates plans and applies them to simulated hardware.\nDuplicate, stale and unsafe commands are rejected.'],
   ['Five models, three categories', 'Traditional: decision tree and support vector models.\nEnsemble: random forest and XGBoost.\nNeural network: hidden layers 64 / 32 / 16.\nIndependent energy regressors and high-demand classifiers.\nAll training data is read from SQLite.'],
-  ['Data and evaluation', '42 synthetic days: 1,008 hourly observations.\nHistory follows MQTT -> Node-RED -> SQLite.\n28 training days; 7 validation days; 7 test days.\nSelection uses validation RMSE and a 100 ms p95 latency limit.\nTest scores never select the model.'],
+  ['Data and evaluation', `Real ACN-Data sessions (Caltech) with simulated SoC; synthetic fallback when offline.\nReport data source: ${report.data_source || 'unreported legacy source'}.\nHistory follows MQTT -> Node-RED -> SQLite.\n${report.training_days.length} training / ${report.validation_days.length} validation / ${report.test_days.length} test days.\nSelection uses validation RMSE and latency, never test scores.`],
+  ['SoC and data provenance', 'Native current samples shape a calibrated SoC estimate.\nBattery capacity: OpenEV when identified, otherwise assumed 40 kWh.\nACN normally lacks vehicle identity and measured SoC.\nPrepared fleets let the sender keep only paho-mqtt.\nLee, Li and Low, ACN-Data, ACM e-Energy 2019.'],
   ['Measured model comparison', modelResults + '\nSelected: ' + report.selected_model],
   ['Performance measurements', 'Regression: RMSE, MAE and R2.\nIndependent high-demand classification: accuracy, precision, recall, F1.\nTraining time, warmed inference latency and serialized size.\nPeak Python-tracked allocations, not total process/GPU memory.\nClosed loop: acknowledgements, response time, switches and safety.'],
   ['Decision and automation', 'Feasibility-aware deadline scheduling with a 5% supply reserve.\nTariff optimization shifts flexible demand to cheaper periods.\nSolver failure falls back to deadline scheduling.\nFallback policy uses dwell time, socket stability and a deadband.\nModels load once at startup; restart after retraining.'],
   ['Verified local MQTT loop', `${live.history_rows} history rows; ${live.stored_cycles} live cycles.\n${live.accepted_commands} accepted commands; ${live.stored_acknowledgements} stored acknowledgements.\nDashboard HTTP ${live.dashboard_http}; peak ${live.max_observed_load_kw} kW.\nMean response ${live.mean_response_ms.toFixed(2)} ms; p95 ${live.p95_response_ms.toFixed(2)} ms.\nLocal test; actual two-laptop network timing remains separate.`],
   ['Tariff demonstration', `Same EVs, energy requirements and deadlines.\nDelivered energy: ${tou.tou.delivered_kwh} kWh; all deadlines met.\nDeadline-only cost: INR ${tou.edf.charging_cost_inr}.\nTariff-aware cost: INR ${tou.tou.charging_cost_inr}.\nPeak site load: ${tou.edf.peak_grid_kw} kW vs ${tou.tou.peak_grid_kw} kW.\nSynthetic evening scenario; not a general savings guarantee.`],
   ['Demonstration commands', 'Project laptop: ./start.ps1 -PublicBroker\nSensor laptop: python simulator.py --public-broker\nDashboard: http://127.0.0.1:1880/dashboard/station\nCopy mqtt-public.json to both laptops; observe readings and acknowledgements.\nUse --tou-demo on the sensor for the evening scenario.'],
-  ['Limits and reproduction', 'Synthetic readings, illustrative tariffs and simplified battery physics.\nCongested requests cannot all meet deadlines.\nML control-outcome improvement over baseline is not established.\nSynchronize laptop clocks for end-to-end latency measurements.\nPublic topics are not private; use synthetic data only (TLS enabled).\nSee README, GridSense_Final_Report.md and artifacts/*.json.']
+  ['Limits and reproduction', 'ACN behavior when configured; derived SoC and simplified battery physics.\nCongested requests cannot all meet deadlines.\nML control-outcome improvement over baseline is not established.\nSynchronize laptop clocks for end-to-end latency measurements.\nPublic topics are not private; transmit no personal data (TLS enabled).\nSee README, GridSense_Final_Report.md and artifacts/*.json.']
 ];
 for (const [title, body] of slides) {
   const slide = ppt.addSlide();
@@ -6943,7 +8084,7 @@ server.listen(1883, host, () => console.log(`MQTT demo broker on ${host}:1883`))
 ================================================
 FILE: node-red/flows.json
 ================================================
-Error reading file with 'cp1252': 'charmap' codec can't decode byte 0x8f in position 11872: character maps to <undefined>
+Error reading file with 'cp1252': 'charmap' codec can't decode byte 0x8f in position 12056: character maps to <undefined>
 
 
 ================================================
@@ -7073,6 +8214,7 @@ FILE: node-red/templates/ml-comparison.vue
 <template>
   <section class="gs-ml" v-if="msg?.payload?.decision">
     <div class="gs-section-heading"><div><p class="gs-eyebrow">PREDICTION & PERFORMANCE</p><h2>Intelligence behind each decision</h2></div><span class="gs-pill good">{{ Object.keys(msg.payload.decision.performance.models).length }} models evaluated</span></div>
+    <p>Training data: {{ msg.payload.decision.performance.data_source || 'unreported legacy source' }}</p>
     <div class="gs-model-summary">
       <div><span>Selected model</span><strong>{{ modelName(msg.payload.decision.model) }}</strong></div>
       <div><span>Next-hour energy forecast</span><strong>{{ forecast }}</strong></div>
@@ -7092,7 +8234,7 @@ FILE: node-red/templates/ml-comparison.vue
     </div>
     <p v-if="!Object.keys(msg.payload.decision.performance.models).length">Train models to populate this table.</p>
     <p class="gs-ml-note">Selected by validation error, with a 100 ms p95 latency limit. Lower RMSE and MAE are better; higher RÂ² and accuracy are better.</p>
-    <details><summary>How to read these metrics</summary><p>Accuracy measures the companion high-demand classifier (energy â‰¥30 kWh). RMSE, MAE and RÂ² measure the energy regressor. Test scores use held-out synthetic days. The selected model must beat the constant baseline on validation RMSE.</p></details>
+    <details><summary>How to read these metrics</summary><p>Accuracy measures the companion high-demand classifier (energy â‰¥30 kWh). RMSE, MAE and RÂ² measure the energy regressor. Test scores use held-out days from {{ msg.payload.decision.performance.data_source || 'unreported legacy source' }}. The selected model must beat the constant baseline on validation RMSE.</p></details>
     <details><summary>Closed-loop performance</summary>
       <div class="gs-control-grid"><div v-for="(value, key) in msg.payload.closed_loop" :key="key"><span>{{ metricName(key) }}</span><strong>{{ value === null ? 'Not yet measurable' : typeof value==='number' ? fmt(value,Number.isInteger(value)?0:3) : value }}</strong></div></div>
     </details>
@@ -7199,6 +8341,7 @@ FILE: node-red/templates/station-overview.vue
       <div class="gs-hero-status">
         <span :class="['gs-pill', fresh ? 'good' : 'waiting']"><span aria-hidden="true">●</span> {{ !state ? 'Awaiting telemetry' : fresh ? 'Telemetry live' : 'Telemetry stale' }}</span>
         <span>Last sensor update · {{ lastSeen }}</span>
+        <span v-if="state">Data: {{ state.source }} ? SoC is model-derived</span>
         <span v-if="state">Simulation · {{ simTime(state.hour) }}</span>
       </div>
     </header>
@@ -7330,6 +8473,14 @@ export default {
 
 
 ================================================
+FILE: sender/acn_key.txt
+================================================
+xH0738_UUgMG7-UszvjV37S-w1Kof0D5ShIGGJEMgVc
+
+$env:ACN_DATA_TOKEN='xH0738_UUgMG7-UszvjV37S-w1Kof0D5ShIGGJEMgVc'
+
+
+================================================
 FILE: sender/actuator.py
 ================================================
 """Actuator driver co-located with physical simulator; subscribes to ev/actuator.
@@ -7413,18 +8564,27 @@ import getpass
 import threading
 import time
 import uuid
+import logging
 from pathlib import Path
 import paho.mqtt.client as mqtt
-from station_core import Station, historical_sessions, tou_demo_station
-from actuator import Actuator
-from tariff import telemetry_fields
+try:
+    from .station_core import Station, real_or_synthetic_history, real_or_synthetic_vehicles, tou_demo_station
+    from .actuator import Actuator
+    from .tariff import telemetry_fields
+except ImportError:
+    from station_core import Station, real_or_synthetic_history, real_or_synthetic_vehicles, tou_demo_station
+    from actuator import Actuator
+    from tariff import telemetry_fields
 
 
-def history_payload():
-    bins = [[0.0]*24 for _ in range(42)]
-    for r in historical_sessions(days=42):
+def history_payload(synthetic_only=False):
+    rows = real_or_synthetic_history(days=42, prefer_real=not synthetic_only)
+    source = rows[0].get('source', 'synthetic-fallback') if rows else 'synthetic-fallback'
+    days = max((r['day'] for r in rows), default=41)+1
+    bins = [[0.0]*24 for _ in range(days)]
+    for r in rows:
         bins[r['day']][r['hour']] += r['energy_kwh']
-    return {'kind':'history','dataset':'synthetic-history-v5','source':'seeded_python_sensor_simulator',
+    return {'kind':'history','dataset':'acn-caltech-v1' if source == 'acn-data-caltech' else 'synthetic-history-v5','source':source,
             'samples':[{'day':d,'hour':h,'energy_kwh':value}
                        for d, row in enumerate(bins) for h,value in enumerate(row)]}
 
@@ -7460,7 +8620,9 @@ def validate_topic_prefix(prefix):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
     parser = argparse.ArgumentParser()
+    parser.add_argument('--synthetic-only', action='store_true', help='Force deterministic offline data; do not fetch or use prepared ACN data')
     parser.add_argument('--public-broker', action='store_true', help='Use the shared mqtt-public.json profile with verified TLS and no credentials')
     parser.add_argument('--topic-prefix', default='ev', help='Shared MQTT topic prefix (default: ev for local/private mode)')
     parser.add_argument('--broker-host', default='127.0.0.1', help='MQTT broker address (project laptop LAN IP for two-laptop mode)')
@@ -7478,7 +8640,21 @@ def main():
     except (ValueError, OSError, KeyError) as exc:
         parser.error(str(exc))
     telemetry_topic = args.topic_prefix + '/telemetry'
-    station, lock = (tou_demo_station() if args.tou_demo else Station()), threading.Lock()
+    # Fetch history before opening MQTT so slow paginated downloads cannot leave
+    # a partially initialized sensor connected. History mode never fetches vehicles twice.
+    history = history_payload(args.synthetic_only) if args.history else None
+    if args.tou_demo:
+        station = tou_demo_station()
+        station.data_source = 'synthetic-tou-demo'
+    elif args.history:
+        station = Station()
+    else:
+        station = Station(real_or_synthetic_vehicles(prefer_real=not args.synthetic_only))
+        station.data_source = getattr(station.vehicles[0], 'data_source', 'synthetic-fallback')
+        if station.data_source == 'acn-data-caltech':
+            station.hour = min(v.arrival for v in station.vehicles)
+            station.refresh()
+    lock = threading.Lock()
     # The hardware rating remains 10 kW; Station enforces a 9.5 kW operating
     # ceiling including base load, independently of received command limits.
     run_id = str(uuid.uuid4())
@@ -7507,11 +8683,11 @@ def main():
             raise RuntimeError('MQTT connection rejected: ' + connection_errors[0])
         print(f'Connected to {args.broker_host}; publishing {telemetry_topic} and listening on {args.topic_prefix}/actuator.', flush=True)
         if args.history:
-            receipt = client.publish(telemetry_topic,json.dumps(history_payload()),qos=1)
+            receipt = client.publish(telemetry_topic,json.dumps(history),qos=1)
             receipt.wait_for_publish(timeout=10)
             if not receipt.is_published():
                 raise RuntimeError('Broker did not acknowledge history publish')
-            print('Published 1008 historical hourly observations. Check /health for SQLite row count before training.')
+            print(f"Published {len(history['samples'])} hourly observations; source={history['source']}. Check /health before training.")
             return
         while True:
             with lock:
@@ -7540,7 +8716,17 @@ FILE: sender/station_core.py
 """Deterministic EV station, deadline scheduler and demand analytics (no I/O)."""
 import math
 import random
+import logging
+import json
+from pathlib import Path
 from dataclasses import dataclass, asdict
+
+try:
+    import acn_data
+except ImportError:
+    acn_data = None
+
+LOG = logging.getLogger(__name__)
 
 SAFETY_FACTOR = 0.95
 
@@ -7625,7 +8811,7 @@ class Station:
                 "chargers": self.chargers, "vehicles": rows,
                 "load_kw": self.base_kw + sum(e.power_kw for e in self.vehicles),
                 "applied_sequence": self.last_applied_sequence,
-                "source": "synthetic_python_simulator"}
+                "source": getattr(self, 'data_source', 'synthetic-fallback')}
 
     def accept(self, command):
         # A whole-station plan is validated before any actuator state changes.
@@ -7709,6 +8895,73 @@ def historical_sessions(days=28, seed=42):
                 rows.append({"day": day, "hour": hour,
                              "energy_kwh": rng.uniform(5, 20)})
     return rows
+
+
+def real_or_synthetic_history(days=42, prefer_real=True):
+    if prefer_real and acn_data is not None:
+        try:
+            if acn_data.LOCAL_DIR.exists():
+                sessions = acn_data.saved_sessions(for_history=True, days=days)
+            else:
+                start, end = acn_data.recent_window(days)
+                sessions = acn_data.fetch_sessions(start=start, end=end)
+            rows = acn_data.to_demand_samples(sessions)
+            active_days = {r['day'] for r in rows}
+            if len(active_days) < 18:
+                raise ValueError('fewer than 18 days with observed sessions')
+            # The API query covers complete local days. Missing hourly arrivals
+            # inside that fully fetched interval are observed zeros, not fake sessions.
+            bins = {(r['day'], r['hour']): r['energy_kwh'] for r in rows}
+            dense = [{'dataset': 'acn-caltech-v1', 'day': d, 'hour': h,
+                      'energy_kwh': bins.get((d, h), 0.0), 'source': 'acn-data-caltech'}
+                     for d in range(max(active_days)+1) for h in range(24)]
+            LOG.warning('Using ACN-Data history: %d sessions, %d complete hourly days', len(sessions), len(dense)//24)
+            # Export only derived fleet parameters for a paho-only sensor laptop.
+            fleet = acn_data.to_vehicle_sessions(sessions)
+            if fleet:
+                target = Path(__file__).with_name('acn_vehicles.json')
+                target.write_text(json.dumps({'source': 'acn-data-caltech', 'vehicles': [asdict(v) for v in fleet]}), encoding='utf-8')
+            return dense
+        except Exception as exc:
+            # Never include provider exception text, URLs or credentials in logs.
+            LOG.warning('[FALLBACK] Using synthetic history (%s)', type(exc).__name__)
+    else:
+        LOG.warning('[FALLBACK] Using synthetic history (%s)', 'forced offline' if not prefer_real else 'ACN module unavailable')
+    return historical_sessions(days, seed=42)
+
+
+def real_or_synthetic_vehicles(prefer_real=True):
+    if prefer_real and acn_data is not None:
+        try:
+            if acn_data.LOCAL_DIR.exists():
+                sessions = acn_data.saved_sessions()
+            else:
+                start, end = acn_data.recent_window(7)
+                sessions = acn_data.fetch_sessions(start=start, end=end)
+            fleet = acn_data.to_vehicle_sessions(sessions)
+            if fleet:
+                return fleet[:6]
+            raise ValueError('No usable ACN vehicles')
+        except Exception as exc:
+            LOG.warning('[FALLBACK] Using synthetic vehicles (%s)', type(exc).__name__)
+    elif prefer_real:
+        # A copied sender/ folder has no data-access packages or token. It can
+        # replay the explicitly exported fleet from the project laptop instead.
+        try:
+            payload = json.loads(Path(__file__).with_name('acn_vehicles.json').read_text(encoding='utf-8'))
+            fleet = [Vehicle(**row) for row in payload['vehicles'][:6]]
+            if payload.get('source') != 'acn-data-caltech' or not fleet:
+                raise ValueError('Invalid prepared fleet')
+            for vehicle in fleet:
+                if not (vehicle.departure > vehicle.arrival and vehicle.capacity > 0 and 0 <= vehicle.soc <= vehicle.target <= 1 and 0 < vehicle.max_kw <= 7):
+                    raise ValueError('Invalid prepared vehicle')
+                vehicle.data_source = 'acn-data-caltech'
+            return fleet
+        except (OSError, ValueError, KeyError, TypeError):
+            LOG.warning('[FALLBACK] Using synthetic vehicles (no prepared ACN fleet)')
+    else:
+        LOG.warning('[FALLBACK] Using synthetic vehicles (forced offline)')
+    return demo_vehicles()
 
 
 def demand_model():
@@ -7798,6 +9051,9 @@ FILE: tests/live_check.py
 ================================================
 """Owns a complete local test stack; ports 1880/1883/8765 must be free."""
 import json
+import argparse
+import os
+import socket
 import sqlite3
 import subprocess
 import sys
@@ -7807,6 +9063,13 @@ from pathlib import Path
 import paho.mqtt.client as mqtt
 
 ROOT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser()
+parser.add_argument('--synthetic-only', action='store_true')
+parser.add_argument('--mock-acn', action='store_true', help='Exercise real-source processing with deterministic ACN fixtures, no external data access')
+args = parser.parse_args()
+synthetic_only = args.synthetic_only or (not args.mock_acn and not os.environ.get('ACN_DATA_TOKEN'))
+sensor_script = 'tests/mock_acn_sender.py' if args.mock_acn else 'simulator.py'
+sensor_flags = ['--synthetic-only'] if synthetic_only else []
 workers, handles, acks, states = [], [], [], []
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 
@@ -7839,20 +9102,29 @@ def on_message(client, userdata, message):
 
 
 try:
+    for port in (1880, 1883, 8765):
+        with socket.socket() as probe:
+            probe.settimeout(1)
+            if probe.connect_ex(('127.0.0.1',port)) == 0:
+                raise RuntimeError(f'Stop the existing project before integration testing: port {port} is busy')
     start(['node','node-red/demo-broker.cjs'],'test-broker')
     service=start([sys.executable,'station_service.py'],'test-service')
     start(['node','node_modules/node-red/red.js','--userDir','.','--settings','settings.js','flows.json'],'test-nodered',ROOT/'node-red')
     wait_http('http://127.0.0.1:8765/health')
     wait_http('http://127.0.0.1:1880/dashboard/station')
     time.sleep(2)
-    subprocess.run([sys.executable,'simulator.py','--history'],cwd=ROOT,check=True,timeout=20)
+    subprocess.run([sys.executable,sensor_script,'--history',*sensor_flags],cwd=ROOT,check=True,timeout=360)
     deadline=time.time()+20
     while time.time()<deadline:
         health=json.loads(wait_http('http://127.0.0.1:8765/health'))
-        if health['history_rows']>=1008:
+        if health['active_history_rows']>=432:
             break
         time.sleep(.5)
-    assert health['history_rows']>=1008, 'History did not pass through Node-RED into SQLite'
+    assert health['active_history_rows']>=432, 'History did not pass through Node-RED into SQLite'
+    if synthetic_only:
+        assert health['data_source']=='synthetic-fallback'
+    if args.mock_acn:
+        assert health['data_source']=='acn-data-caltech'
     print('History committed through MQTT/Node-RED:',health['history_rows'],flush=True)
     with open(ROOT/'training.log','w') as training_log:
         subprocess.run([sys.executable,'ml_train.py'],cwd=ROOT,stdout=training_log,stderr=subprocess.STDOUT,check=True,timeout=180)
@@ -7869,7 +9141,7 @@ try:
     client.subscribe('ev/ack',qos=1)
     client.subscribe('ev/telemetry',qos=1)
     client.loop_start()
-    start([sys.executable,'simulator.py'],'test-simulator')
+    start([sys.executable,sensor_script,*sensor_flags],'test-simulator')
     deadline=time.time()+40
     while time.time()<deadline:
         if sum(a['accepted'] for a in acks)>=5 and any(s['applied_sequence']>=0 and s['load_kw']>1 for s in states):
@@ -7889,15 +9161,18 @@ try:
         conn.close()
     assert ack_count>0
     assert decision['model']==report['selected_model']
+    assert report['data_source']==health['data_source']
     result={'accepted_commands':sum(a['accepted'] for a in acks),'stored_cycles':count,
             'stored_acknowledgements':ack_count,'history_rows':health['history_rows'],
-            'dashboard_http':200,'selected_model':decision['model'],
+            'dashboard_http':200,'selected_model':decision['model'], 'data_source':report['data_source'],
+            'acn_fixture_test':args.mock_acn,
             'max_observed_load_kw':max(s['load_kw'] for s in states),
             'mean_response_ms':sum(a['response_ms'] for a in acks if a['accepted'])/sum(a['accepted'] for a in acks)}
     times=sorted(a['response_ms'] for a in acks if a['accepted'])
     result['p95_response_ms']=times[min(len(times)-1,int(.95*len(times)))]
     result['mean_inference_ms']=sum(a['inference_ms'] for a in acks if a['accepted'])/len(times)
-    (ROOT/'artifacts/live_check.json').write_text(json.dumps(result,indent=2))
+    output = 'live_check_acn_mock.json' if args.mock_acn else 'live_check.json'
+    (ROOT/'artifacts'/output).write_text(json.dumps(result,indent=2))
     print(json.dumps(result,indent=2))
 finally:
     client.disconnect()
@@ -7908,6 +9183,32 @@ finally:
             worker.wait(timeout=10)
     for handle in handles:
         handle.close()
+
+
+
+================================================
+FILE: tests/mock_acn_sender.py
+================================================
+"""Integration-test-only ACN fixtures. Never included in the demo submission."""
+import sys
+from pathlib import Path
+from unittest.mock import patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import acn_data
+from sender.simulator import main
+from test_acn_data import fixture_session
+
+if __name__ == '__main__':
+    sessions = [fixture_session(day=d, hour=h, energy=value)
+                for d in range(42) for h, value in ((8,60+d%7),(18,10+d%4))]
+    with patch.object(acn_data, 'recent_window', return_value=('2020-01-01','2020-02-12')), patch.object(
+            acn_data, 'fetch_sessions', return_value=sessions):
+        if '--history' in sys.argv:
+            # Do not export test fixtures as a real user's prepared fleet.
+            with patch.object(acn_data, 'to_vehicle_sessions', return_value=[]):
+                main()
+        else:
+            main()
 
 
 
@@ -8040,6 +9341,256 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+================================================
+FILE: tests/test_acn_data.py
+================================================
+import json
+import os
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import acn_data
+from sender import station_core
+from sender.simulator import history_payload
+
+
+def fixture_session(day=0, hour=8, energy=10, identifier=None, currents=None):
+    start = datetime(2020, 1, 1, hour, tzinfo=timezone(timedelta(hours=-8)))+timedelta(days=day)
+    values = currents or [24, 24, 24, 24, 24, 24]
+    return {'sessionID': identifier or f'sess{day:04d}{hour:02d}', 'timezone': 'America/Los_Angeles',
+            'connectionTime': start.isoformat(), 'disconnectTime': (start+timedelta(hours=2)).isoformat(),
+            'kWhDelivered': energy, 'chargingCurrent': {'current': values, 'timestamps':
+            [(start+timedelta(hours=2*i/(len(values)-1))).isoformat() for i in range(len(values))]},
+            'userInputs': []}
+
+
+class AcnDataTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.cache = patch.object(acn_data, 'CACHE_PATH', Path(self.tmp.name)/'cache.json')
+        self.local = patch.object(acn_data, 'LOCAL_DIR', Path(self.tmp.name)/'downloads')
+        self.local.start()
+        self.addCleanup(self.local.stop)
+        self.cache.start()
+        self.addCleanup(self.cache.stop)
+        self.env = patch.dict(os.environ, {}, clear=True)
+        self.env.start()
+        self.addCleanup(self.env.stop)
+        self.network = patch('requests.get', side_effect=AssertionError('Network is forbidden in unit tests'))
+        self.network.start()
+        self.addCleanup(self.network.stop)
+        acn_data.battery_capacity_for.cache_clear()
+        acn_data._ev_catalog.cache_clear()
+
+    def test_saved_partial_days_are_live_only(self):
+        session = fixture_session()
+        acn_data._write_json(acn_data.LOCAL_DIR/'caltech-2020-01-01.json',
+                             {'site': 'caltech', 'day': '2020-01-01', 'complete': False,
+                              'sessions': [session]})
+        self.assertEqual(acn_data.saved_sessions(), [session])
+        with self.assertRaises(acn_data.AcnDataError):
+            acn_data.saved_sessions(for_history=True)
+        with patch.object(acn_data, 'fetch_sessions', side_effect=AssertionError('no network')):
+            self.assertEqual(history_payload()['source'], 'synthetic-fallback')
+            self.assertEqual(station_core.real_or_synthetic_vehicles()[0].data_source, 'acn-data-caltech')
+
+    def test_saved_history_requires_contiguous_complete_days(self):
+        for day in range(18):
+            session = fixture_session(day)
+            date = acn_data._local(session, 'connectionTime').date().isoformat()
+            acn_data._write_json(acn_data.LOCAL_DIR/f'caltech-{date}.json',
+                                 {'site': 'caltech', 'day': date, 'complete': True, 'sessions': [session]})
+        self.assertEqual(len(acn_data.saved_sessions(for_history=True)), 18)
+        (acn_data.LOCAL_DIR/'caltech-2020-01-09.json').unlink()
+        with self.assertRaises(acn_data.AcnDataError):
+            acn_data.saved_sessions(for_history=True)
+
+    def test_download_keeps_and_resumes_partial_page_progress(self):
+        start = datetime(2020, 1, 1, tzinfo=timezone(timedelta(hours=-8)))
+        first = Mock()
+        first.json.return_value = {'_items': [fixture_session()], '_links': {'next': {}}}
+        second = Mock()
+        second.json.return_value = {'_items': [fixture_session(hour=9)], '_links': {}}
+        with patch.dict(os.environ, {'ACN_DATA_TOKEN': 'secret'}), patch.object(
+                acn_data, 'recent_window', return_value=(start, start+timedelta(days=1))):
+            with patch.object(acn_data, '_get', side_effect=[first, OSError('secret')]):
+                self.assertEqual(len(acn_data.download_local(days=1)), 1)
+            with patch.object(acn_data, '_get', return_value=second) as get:
+                self.assertEqual(len(acn_data.download_local(days=1)), 2)
+                self.assertEqual(get.call_args.kwargs['params']['page'], 2)
+        record = json.loads((acn_data.LOCAL_DIR/'caltech-2020-01-01.json').read_text())
+        self.assertTrue(record['complete'])
+        self.assertNotIn('secret', json.dumps(record))
+
+    def test_fetch_sessions_returns_real_sessions_when_token_set(self):
+        sessions = [fixture_session(), fixture_session(1, 9)]
+        with patch.dict(os.environ, {'ACN_DATA_TOKEN':'private-test-token'}), patch(
+                'acnportal.acndata.DataClient.get_sessions', return_value=iter(sessions)) as get:
+            result = acn_data.fetch_sessions(start='2020-01-01', end='2020-01-04')
+        rows = acn_data.to_demand_samples(result)
+        self.assertEqual([(r['day'], r['hour']) for r in rows], [(0,8), (1,9)])
+        self.assertTrue(all(r['source']=='acn-data-caltech' for r in rows))
+        self.assertTrue(get.call_args.kwargs['timeseries'])
+        self.assertIn('Wed, 01 Jan 2020 00:00:00 GMT', get.call_args.kwargs['cond'])
+        self.assertNotIn('private-test-token', acn_data.CACHE_PATH.read_text())
+
+    def test_fetch_sessions_raises_when_token_missing(self):
+        with self.assertRaises(acn_data.AcnDataNotConfigured):
+            acn_data.fetch_sessions(start='2020-01-01', end='2020-01-04')
+
+    def test_simulate_soc_trace_matches_delivered_energy(self):
+        trace = acn_data.simulate_soc_trace(fixture_session(), 40, initial_soc=.3)
+        self.assertAlmostEqual(trace['final_soc'], .55, delta=.01)
+        self.assertEqual(len(trace['soc_series']), 6)
+        self.assertAlmostEqual(trace['soc_series'][0]['soc'], .3)
+        self.assertEqual(trace['soc_series'][-1]['soc'], trace['final_soc'])
+        self.assertTrue(all(a['soc']<=b['soc'] for a,b in zip(trace['soc_series'],trace['soc_series'][1:])))
+
+    def test_taper_detected_above_80_percent(self):
+        trace = acn_data.simulate_soc_trace(fixture_session(energy=6, currents=[32]*8+[8,4]), 40, initial_soc=.8)
+        self.assertTrue(trace['taper_observed'])
+        self.assertAlmostEqual(trace['initial_soc_estimate'], .8)
+        self.assertLessEqual(trace['final_soc'], 1)
+
+    def test_requested_energy_and_overnight_session(self):
+        session = fixture_session(hour=23)
+        session['userInputs'] = [{'kWhRequested': 20}]
+        trace = acn_data.simulate_soc_trace(session, 40)
+        self.assertAlmostEqual(trace['initial_soc_estimate'], .5)
+        self.assertEqual(trace['arrival_hour'], 23)
+        self.assertEqual(trace['departure_hour'], 1)
+        vehicle = acn_data.to_vehicle_sessions([session], lambda *args: 40)[0]
+        self.assertEqual(vehicle.departure, 25)
+
+    def test_real_or_synthetic_history_falls_back_cleanly(self):
+        with patch.object(acn_data, 'recent_window', return_value=('2020-01-01','2020-02-12')), patch.object(
+                acn_data, 'fetch_sessions', side_effect=OSError('must-not-log-secret')), self.assertLogs(level='WARNING') as captured:
+            rows = station_core.real_or_synthetic_history(42)
+        self.assertEqual(rows, station_core.historical_sessions(42, seed=42))
+        self.assertIn('[FALLBACK] Using synthetic history', '\n'.join(captured.output))
+        self.assertNotIn('must-not-log-secret', '\n'.join(captured.output))
+
+    def test_no_token_history_payload_is_explicit_fallback(self):
+        payload = history_payload()
+        self.assertEqual(payload['source'], 'synthetic-fallback')
+        self.assertEqual(len(payload['samples']), 1008)
+
+    def test_insufficient_days_fall_back(self):
+        with patch.object(acn_data, 'recent_window', return_value=('2020-01-01','2020-02-12')), patch.object(
+                acn_data, 'fetch_sessions', return_value=[fixture_session()]):
+            self.assertEqual(station_core.real_or_synthetic_history(42), station_core.historical_sessions(42))
+
+    def test_real_history_is_dense_without_inventing_energy(self):
+        sessions = [fixture_session(day=d) for d in range(18)]
+        with patch.object(acn_data, 'recent_window', return_value=('2020-01-01','2020-02-12')), patch.object(
+                acn_data, 'fetch_sessions', return_value=sessions), patch.object(acn_data, 'to_vehicle_sessions', return_value=[]):
+            payload = history_payload()
+        self.assertEqual(payload['dataset'], 'acn-caltech-v1')
+        self.assertEqual(payload['source'], 'acn-data-caltech')
+        self.assertEqual(len(payload['samples']), 18*24)
+        self.assertEqual(sum(r['energy_kwh'] for r in payload['samples']), 180)
+
+    def test_synthetic_only_makes_no_fetches(self):
+        with patch.object(acn_data, 'fetch_sessions', side_effect=AssertionError('should not fetch')):
+            self.assertEqual(history_payload(True)['source'], 'synthetic-fallback')
+            self.assertEqual(station_core.real_or_synthetic_vehicles(False), station_core.demo_vehicles())
+
+    def test_cache_ttl_and_minimum_energy_filter(self):
+        with patch.dict(os.environ, {'ACN_DATA_TOKEN':'secret'}), patch('acnportal.acndata.DataClient.get_sessions',
+                side_effect=lambda *a, **k: iter([fixture_session(energy=1)])) as get:
+            with patch('acn_data.time.time', return_value=100):
+                self.assertEqual(len(acn_data.fetch_sessions(start='2020-01-01',end='2020-01-03')), 1)
+            with patch('acn_data.time.time', return_value=200):
+                self.assertEqual(acn_data.fetch_sessions(start='2020-01-01',end='2020-01-03',min_kwh=2), [])
+            self.assertEqual(get.call_count, 1)
+            with patch('acn_data.time.time', return_value=100+acn_data.CACHE_TTL+1):
+                acn_data.fetch_sessions(start='2020-01-01',end='2020-01-03')
+            self.assertEqual(get.call_count, 2)
+
+    def test_capacity_lookup_and_unknown_default(self):
+        with patch.object(acn_data, '_ev_catalog', return_value=[{'brand':'Example', 'model':'EV', 'year':2020,
+                      'battery':{'pack_capacity_kwh_net':58}}]) as catalog:
+            self.assertEqual(acn_data.battery_capacity_for('Example','EV',2020), 58)
+            self.assertEqual(acn_data.battery_capacity_for('Example','EV',2020), 58)
+            self.assertEqual(catalog.call_count, 1)
+        with self.assertLogs(level='WARNING'):
+            self.assertEqual(acn_data.battery_capacity_for(None,None,None), 40)
+
+    def test_fleet_caps_six_and_disambiguates_ids(self):
+        sessions = [fixture_session(identifier=f'samehead{i}') for i in range(8)]
+        fleet = acn_data.to_vehicle_sessions(sessions, lambda *args: 40)
+        self.assertEqual(len(fleet), 6)
+        self.assertEqual(len({v.id for v in fleet}), 6)
+        self.assertTrue(all(0<v.max_kw<=7 and v.departure>v.arrival for v in fleet))
+
+    def test_latest_available_window_excludes_partial_day(self):
+        response = Mock()
+        response.json.return_value = {'_items':[fixture_session(day=41)]}
+        with patch.dict(os.environ, {'ACN_DATA_TOKEN':'secret'}), patch.object(acn_data, '_get', return_value=response):
+            start, end = acn_data.recent_window(42)
+        self.assertEqual(end.hour, 0)
+        self.assertEqual((end-start).days, 42)
+
+    def test_end_date_override_is_site_local(self):
+        with patch.dict(os.environ, {'ACN_DATA_TOKEN': 'test', 'ACN_DATA_END': '2020-02-12'}):
+            start, end = acn_data.recent_window(42)
+        self.assertEqual(end.isoformat(), '2020-02-12T00:00:00-08:00')
+        self.assertEqual((end-start).days, 42)
+
+    def test_logger_padding_is_trimmed_to_connected_interval(self):
+        session = fixture_session()
+        series = session['chargingCurrent']
+        series['timestamps'].insert(0, (acn_data._datetime(session['connectionTime'])-timedelta(minutes=1)).isoformat())
+        series['timestamps'].append((acn_data._datetime(session['disconnectTime'])+timedelta(minutes=1)).isoformat())
+        series['current'] = [0]+series['current']+[0]
+        trace = acn_data.simulate_soc_trace(session, 40)
+        self.assertEqual(len(trace['soc_series']), 6)
+        self.assertAlmostEqual(trace['final_soc'], .55)
+
+    def test_invalid_trace_rejected(self):
+        session = fixture_session()
+        session['chargingCurrent']['timestamps'][2] = session['chargingCurrent']['timestamps'][1]
+        with self.assertRaises(ValueError):
+            acn_data.simulate_soc_trace(session, 40)
+
+    def test_health_reports_latest_replayed_source(self):
+        from station_store import ingest, database
+        from station_service import Handler
+        db = Path(self.tmp.name)/'health.db'
+        handler = Handler.__new__(Handler)
+        handler.path = '/health'
+        handler.respond = Mock()
+        with patch('station_service.database', side_effect=lambda: database(db)):
+            for source in ('acn-data-caltech', 'synthetic-fallback', 'acn-data-caltech'):
+                ingest({'kind':'history','dataset':source,'source':source,
+                        'samples':[{'day':0,'hour':0,'energy_kwh':10}]}, db)
+                handler.do_GET()
+                self.assertEqual(handler.respond.call_args.args[0]['data_source'], source)
+
+    def test_cache_can_be_unwritable_without_losing_real_results(self):
+        with patch.dict(os.environ, {'ACN_DATA_TOKEN':'secret'}), patch(
+                'acnportal.acndata.DataClient.get_sessions', return_value=iter([fixture_session()])), patch(
+                'pathlib.Path.write_text', side_effect=OSError('denied')):
+            result = acn_data.fetch_sessions(start='2020-01-01',end='2020-01-03')
+        self.assertEqual(len(result), 1)
+
+    def test_shorter_history_replay_does_not_mix_old_days(self):
+        from station_store import ingest, database
+        db = Path(self.tmp.name)/'replace.db'
+        payload = {'kind':'history','dataset':'acn-caltech-v1','source':'acn-data-caltech',
+                   'samples':[{'day':d,'hour':0,'energy_kwh':10} for d in range(3)]}
+        ingest(payload, db)
+        payload['samples'] = payload['samples'][:1]
+        ingest(payload, db)
+        with database(db) as conn:
+            self.assertEqual(conn.execute('SELECT count(*) FROM demand_samples').fetchone()[0], 1)
 
 
 
@@ -8204,7 +9755,7 @@ from sender.simulator import history_payload
 
 class RubricTests(unittest.TestCase):
     def test_independent_dashboard_path_and_topics(self):
-        nodes = json.loads((Path(__file__).parents[1]/'node-red/flows.json').read_text())
+        nodes = json.loads((Path(__file__).parents[1]/'node-red/flows.json').read_text(encoding='utf-8'))
         nodes = {n['id']:n for n in nodes}
         self.assertEqual(nodes['sensor']['topic'],'ev/telemetry')
         self.assertEqual(set(nodes['sensor']['wires'][0]),{'live-filter','request'})
@@ -8214,14 +9765,14 @@ class RubricTests(unittest.TestCase):
     def test_db_ingest_idempotent_history(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp)/'test.db'
-            ingest(history_payload(),db)
-            ingest(history_payload(),db)
+            ingest(history_payload(synthetic_only=True),db)
+            ingest(history_payload(synthetic_only=True),db)
             with database(db) as conn:
                 self.assertEqual(conn.execute('SELECT count(*) FROM demand_samples').fetchone()[0],1008)
 
     def test_complete_reference_architecture_wiring(self):
         nodes = {n['id']: n for n in json.loads(
-            (Path(__file__).parents[1]/'node-red/flows.json').read_text())}
+            (Path(__file__).parents[1]/'node-red/flows.json').read_text(encoding='utf-8'))}
         # Storage must precede analytics; only the decision path drives MQTT output.
         for source, target in [('request', 'analytics'), ('analytics', 'stored'),
                                ('stored', 'db-decision'), ('db-decision', 'route'),
@@ -8281,8 +9832,18 @@ class RubricTests(unittest.TestCase):
             db=Path(tmp)/'test.db'
             with self.assertRaises(ValueError):
                 train(db,Path(tmp)/'artifacts')
-            ingest(history_payload(),db)
+            from acn_data import to_demand_samples
+            from test_acn_data import fixture_session
+            sessions = [fixture_session(day=d, hour=h, energy=value)
+                        for d in range(42) for h, value in ((8, 60+d%7), (18, 10+d%4))]
+            sparse = to_demand_samples(sessions)
+            bins = {(r['day'],r['hour']):r['energy_kwh'] for r in sparse}
+            ingest({'kind':'history', 'dataset':'acn-caltech-v1', 'source':'acn-data-caltech',
+                    'samples':[{'day':d,'hour':h,'energy_kwh':bins.get((d,h),0)}
+                               for d in range(42) for h in range(24)]}, db)
             report=train(db,Path(tmp)/'artifacts')
+            self.assertEqual(report['dataset'], 'acn-caltech-v1')
+            self.assertEqual(report['data_source'], 'acn-data-caltech')
             self.assertEqual(len(report['models']),5)
             self.assertIn('traditional_svr', report['models'])
             self.assertIn('ensemble_xgboost', report['models'])
@@ -8373,7 +9934,7 @@ class StationTests(unittest.TestCase):
             with closing(sqlite3.connect(db)) as conn:
                 self.assertEqual(conn.execute("SELECT count(*) FROM cycles").fetchone()[0], 1)
                 row = conn.execute("SELECT telemetry,decision FROM cycles").fetchone()
-            self.assertEqual(json.loads(row[0])["source"], "synthetic_python_simulator")
+            self.assertEqual(json.loads(row[0])["source"], "synthetic-fallback")
             self.assertIn("assignments", json.loads(row[1]))
 
 
